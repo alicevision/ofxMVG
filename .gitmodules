@@ -1,0 +1,4 @@
+[submodule "openfx"]
+	path = openfx
+	url = https://github.com/tuttleofx/openfx.git
+	branch = addCMakeFiles

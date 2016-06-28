@@ -1,0 +1,31 @@
+sudo: required
+services:
+  - docker
+
+language: cpp
+
+os:
+  - linux
+
+compiler:
+  - gcc
+  - clang
+
+env:
+  global:
+     - PLUGIN_BUILD=${TRAVIS_BUILD_DIR}/build
+     - PLUGIN_INSTALL=${TRAVIS_BUILD_DIR}/install
+
+# This results in a 2x2 build matrix.
+# Where the variables are: os / compiler
+
+script:
+  - mkdir ${PLUGIN_BUILD}
+  - cd ${PLUGIN_BUILD}
+  - cmake .. -DCMAKE_INSTALL_PREFIX=${PLUGIN_INSTALL}
+  - make all install
+
+#after_success:
+#  - tar -cvzf openMVG_ofx.tar.gz $PLUGIN_INSTALL
+#  - curl -s -o /dev/null -w "%{http_code}" -X POST -F "file=@openMVG_ofx.tar.gz" http://shuttleofx.org/upload/automated/$TOKEN
+
