@@ -3,7 +3,11 @@
 #include <cstddef>
 #include <vector>
 
-namespace cameraColorCalibration {
+namespace openMVG_ofx
+{
+
+namespace Localizer
+{
 
 template<typename DataType>
 class Image
@@ -170,4 +174,6 @@ private:
 };
 
 
-}
+} //namespace Localizer
+
+} //namespace openMVG_ofx

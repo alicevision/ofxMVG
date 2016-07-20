@@ -13,6 +13,10 @@ if(NOT EXISTS ${PROJECT_SOURCE_DIR}/openfx/include)
     "  > git submodule update -i\n")
 endif()
 
+find_package(OpenMVG REQUIRED)
+find_package(Ceres)
+find_package(OpenCV)
+
 # Add openfx subdirectory
 add_subdirectory("${PROJECT_SOURCE_DIR}/openfx")
 

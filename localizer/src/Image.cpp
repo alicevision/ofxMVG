@@ -2,7 +2,11 @@
 #include <cassert>
 #include <iostream>
 
-namespace cameraColorCalibration {
+namespace openMVG_ofx
+{
+
+namespace Localizer
+{
 
 template<typename DataType>
 Image<DataType>::Image()
@@ -224,6 +228,8 @@ void Image<DataType>::checkSameDimensions(const std::vector< Image<DataType> > &
 
 template class Image<float>;
 
-}
 
+} //namespace Localizer
+
+} //namespace openMVG_ofx
 
