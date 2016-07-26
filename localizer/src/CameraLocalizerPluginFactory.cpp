@@ -14,11 +14,8 @@ void OFX::Plugin::getPluginIDs(OFX::PluginFactoryArray &ids)
 }
 
 
-namespace openMVG_ofx
-{
-
-namespace Localizer
-{ 
+namespace openMVG_ofx {
+namespace Localizer { 
 
 void CameraLocalizerPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
@@ -102,6 +99,14 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     param->setStringType(OFX::eStringTypeFilePath);
     param->setFilePathExists(true);
   }
+  
+  {
+    OFX::StringParamDescriptor *param = desc.defineStringParam(kParamDescriptorsFolder);
+    param->setLabel("Descriptors Folder");
+    param->setHint("3D reconstruction descriptors folder"); 
+    param->setStringType(OFX::eStringTypeDirectoryPath);
+    param->setFilePathExists(true);
+  }
 
   {
     OFX::StringParamDescriptor *param = desc.defineStringParam(kParamVoctreeFile);
@@ -121,9 +126,17 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamRigMode);
     param->setLabel("Rig Status");
     param->setHint("Is the camera rig calibrated?");
-    param->setLayoutHint(OFX::eLayoutHintDivider);
     param->appendOptions(kStringParamRigMode);
-    param->setDefault(eParamRigModeKnown);
+    param->setDefault(eParamRigModeUnKnown);
+  }
+  
+  {
+    OFX::StringParamDescriptor *param = desc.defineStringParam(kParamRigCalibrationFile);
+    param->setLabel("Rig Calibration File");
+    param->setHint("Rig calibration file"); //TODO FACA
+    param->setStringType(OFX::eStringTypeFilePath);
+    param->setFilePathExists(true);
+    param->setLayoutHint(OFX::eLayoutHintDivider);
   }
 
   //Inputs Tabs
@@ -132,110 +145,125 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     OFX::GroupParamDescriptor *groupInput = desc.defineGroupParam(kParamGroupInput(input));
     groupInput->setLabel("Input " + kClip(input));
     groupInput->setAsTab();
+    
+    //Lens calibration Group
+    {
+      OFX::GroupParamDescriptor *groupLensCalibration = desc.defineGroupParam(kParamInputGroupLensCalibration(input));
+      groupLensCalibration->setLabel("Lens calibration");
+      groupLensCalibration->setParent(*groupInput);
+      
+      {
+        OFX::StringParamDescriptor *param = desc.defineStringParam(kParamInputLensCalibrationFile(input));
+        param->setLabel("Lens Calibration File");
+        param->setHint("Calibration file to initialize camera intrinsics parameters.");
+        param->setStringType(OFX::eStringTypeDirectoryPath);
+        param->setParent(*groupLensCalibration);
+      }
 
-    {
-      OFX::StringParamDescriptor *param = desc.defineStringParam(kParamInputCalibrationFile(input));
-      param->setLabel("Calibration File");
-      param->setHint("Calibration file to initialize camera intrinsics parameters.");
-      param->setStringType(OFX::eStringTypeDirectoryPath);
-      param->setParent(*groupInput);
-      param->setLayoutHint(OFX::eLayoutHintDivider);
-    }
+      {
+        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamInputDistortion(input));
+        param->setLabel("Lens Distortion Status");
+        param->setHint("Is the lens distortion calibrated?");
+        param->setParent(*groupLensCalibration);
+        param->appendOptions(kStringParamLensDistortion);
+        param->setDefault(eParamLensDistortionKnown);
+      }
 
-    {
-      OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamInputDistortion(input));
-      param->setLabel("Lens Distortion Status");
-      param->setHint("Is the lens distortion calibrated?");
-      param->setParent(*groupInput);
-      param->appendOptions(kStringParamLensDistortion);
-      param->setDefault(eParamLensDistortionKnown);
-    }
+      {
+        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamInputDistortionMode(input));
+        param->setLabel("Lens Distortion Model");
+        param->setHint("Mathematical model used for lens distortion.");
+        param->setParent(*groupLensCalibration);
+        param->appendOptions(kStringParamLensDistortionMode);
+        param->setDefault(eParamLensDistortionModeRadial3);
+      }
 
-    {
-      OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamInputDistortionMode(input));
-      param->setLabel("Lens Distortion Model");
-      param->setHint("Mathematical model used for lens distortion.");
-      param->setParent(*groupInput);
-      param->appendOptions(kStringParamLensDistortionMode);
-      param->setDefault(eParamLensDistortionModeRadial3);
-    }
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputDistortionCoef1(input));
+        param->setLabel("Lens Distortion Coef1");
+        param->setHint("Lens distortion coefficient 1");
+        param->setRange(-1, 1);
+        param->setParent(*groupLensCalibration);
+      }
 
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputDistortionCoef1(input));
-      param->setLabel("Lens Distortion Coef1");
-      param->setHint("Lens distortion coefficient 1");
-      param->setRange(-1, 1);
-      param->setParent(*groupInput);
-    }
-    
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputDistortionCoef2(input));
-      param->setLabel("Lens Distortion Coef2");
-      param->setHint("Lens distortion coefficient 2");
-      param->setRange(-1, 1);
-      param->setParent(*groupInput);
-    }
-    
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputDistortionCoef3(input));
-      param->setLabel("Lens Distortion Coef3");
-      param->setHint("Lens distortion coefficient 3");
-      param->setRange(-1, 1);
-      param->setParent(*groupInput);
-    }
-    
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputDistortionCoef4(input));
-      param->setLabel("Lens Distortion Coef4");
-      param->setHint("Lens distortion coefficient 4");
-      param->setRange(-1, 1);
-      param->setParent(*groupInput);
-    }
-    
-    {
-      OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamInputOpticalCenter(input));
-      param->setLabel("Optical Center");
-      param->setHint("Optical center coordinates");
-      param->setDisplayRange(-50, -50, 50, 50);
-      param->setAnimates(false);
-      param->setParent(*groupInput);
-    }
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputDistortionCoef2(input));
+        param->setLabel("Lens Distortion Coef2");
+        param->setHint("Lens distortion coefficient 2");
+        param->setRange(-1, 1);
+        param->setParent(*groupLensCalibration);
+      }
 
-    {
-      OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamInputFocalLengthMode(input));
-      param->setLabel("Focal Length Mode");
-      param->setHint("Focal length information");
-      param->setParent(*groupInput);
-      param->appendOptions(kStringParamFocalLengthMode);
-      param->setDefault(eParamFocalLengthModeUnKnown);
-    }
-    
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputFocalLength(input));
-      param->setLabel("Focal Length");
-      param->setHint(
-        "The focal length of the lens is the distance between the lens and "
-        "the image sensor when the subject is in focus, usually stated in millimeters "
-        "(e.g., 28 mm, 50 mm, or 100 mm). In the case of zoom lenses, both the "
-        "minimum and maximum focal lengths are stated, for example 18–55 mm.\n"
-        "The angle of view is the visible extent of the scene captured by the "
-        "image sensor, stated as an angle. Wide angle of views capture greater "
-        "areas, small angles smaller areas. Changing the focal length changes the "
-        "angle of view. The shorter the focal length (e.g. 18 mm), the wider the "
-        "angle of view and the greater the area captured. The longer the focal length "
-        "(e.g. 55 mm), the smaller the angle and the larger the subject appears to be.");
-      param->setDisplayRange(0, 300);
-//      param->setAnimates(false);
-      param->setParent(*groupInput);
-      param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    }
-    
-    {
-      OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamInputFocalLengthVarying(input));
-      param->setLabel("Varying");
-      param->setHint("Is focal length varying?");
-      param->setAnimates(false);
-      param->setParent(*groupInput);
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputDistortionCoef3(input));
+        param->setLabel("Lens Distortion Coef3");
+        param->setHint("Lens distortion coefficient 3");
+        param->setRange(-1, 1);
+        param->setParent(*groupLensCalibration);
+      }
+
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputDistortionCoef4(input));
+        param->setLabel("Lens Distortion Coef4");
+        param->setHint("Lens distortion coefficient 4");
+        param->setRange(-1, 1);
+        param->setParent(*groupLensCalibration);
+      }
+
+      {
+        OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamInputOpticalCenter(input));
+        param->setLabel("Optical Center");
+        param->setHint("Optical center coordinates");
+        param->setDisplayRange(-50, -50, 50, 50);
+        param->setAnimates(false);
+        param->setUseHostOverlayHandle(false);
+        param->setParent(*groupLensCalibration);
+      }
+
+      {
+        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamInputFocalLengthMode(input));
+        param->setLabel("Focal Length Mode");
+        param->setHint("Focal length information");
+        param->setParent(*groupLensCalibration);
+        param->appendOptions(kStringParamFocalLengthMode);
+        param->setDefault(eParamFocalLengthModeUnKnown);
+      }
+
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputFocalLength(input));
+        param->setLabel("Focal Length");
+        param->setHint(
+          "The focal length of the lens is the distance between the lens and "
+          "the image sensor when the subject is in focus, usually stated in millimeters "
+          "(e.g., 28 mm, 50 mm, or 100 mm). In the case of zoom lenses, both the "
+          "minimum and maximum focal lengths are stated, for example 18–55 mm.\n"
+          "The angle of view is the visible extent of the scene captured by the "
+          "image sensor, stated as an angle. Wide angle of views capture greater "
+          "areas, small angles smaller areas. Changing the focal length changes the "
+          "angle of view. The shorter the focal length (e.g. 18 mm), the wider the "
+          "angle of view and the greater the area captured. The longer the focal length "
+          "(e.g. 55 mm), the smaller the angle and the larger the subject appears to be.");
+        param->setDisplayRange(0, 300);
+        param->setParent(*groupLensCalibration);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+      }
+
+      {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamInputFocalLengthVarying(input));
+        param->setLabel("Varying");
+        param->setHint("Is focal length varying?");
+        param->setAnimates(false);
+        param->setParent(*groupLensCalibration);
+      }
+      
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputSensorWidth(input));
+        param->setLabel("Sensor Width");
+        param->setHint("sensor Width"); //TODO FACA
+        param->setDisplayRange(0, 100);
+        param->setAnimates(false);
+        param->setParent(*groupLensCalibration);
+      }
     }
     
     //Relative Pose Group
@@ -369,6 +397,42 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
   }
   
   {
+    OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamTrackingRangeMode);
+    param->setLabel("Tracking Range");
+    param->setHint("Tracking Range");
+    param->appendOptions(kStringParamTrackingRangeMode);
+    param->setEnabled(false);
+  }
+  
+  {
+    OFX::IntParamDescriptor *param = desc.defineIntParam(kParamTrackingRangeMin);
+    param->setLabel("from");
+    param->setHint("Start frame");
+    //param->setRange(0, K_MAX_INPUTS);
+    param->setDisplayRange(0, 240);
+    param->setAnimates(false);
+    param->setEnabled(false);
+  }
+  
+  {
+    OFX::IntParamDescriptor *param = desc.defineIntParam(kParamTrackingRangeMax);
+    param->setLabel("to");
+    param->setHint("Stop frame");
+    //param->setRange(0, K_MAX_INPUTS);
+    param->setDisplayRange(0, 240);
+    param->setAnimates(false);
+    param->setEnabled(false);
+  }
+  
+  {
+    OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamTrackingTrack);
+    param->setLabel("Track");
+    param->setHint("track");
+    param->setEnabled(false);
+    param->setLayoutHint(OFX::eLayoutHintDivider);
+  }
+  
+  {
     OFX::IntParamDescriptor *param = desc.defineIntParam(kParamOutputIndex);
     param->setLabel("Camera Output Index");
     param->setHint("The index of the input clip to expose as the output camera.");
@@ -413,12 +477,45 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     }
     
     {
+      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef1);
+      param->setLabel("Lens Distortion Coef1");
+      param->setHint("Lens distortion coefficient 1");
+      param->setRange(-1, 1);
+      param->setParent(*groupOutput);
+    }
+
+    {
+      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef2);
+      param->setLabel("Lens Distortion Coef2");
+      param->setHint("Lens distortion coefficient 2");
+      param->setRange(-1, 1);
+      param->setParent(*groupOutput);
+    }
+
+    {
+      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef3);
+      param->setLabel("Lens Distortion Coef3");
+      param->setHint("Lens distortion coefficient 3");
+      param->setRange(-1, 1);
+      param->setParent(*groupOutput);
+    }
+
+    {
+      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef4);
+      param->setLabel("Lens Distortion Coef4");
+      param->setHint("Lens distortion coefficient 4");
+      param->setRange(-1, 1);
+      param->setParent(*groupOutput);
+    }
+      
+    {
       OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamOutputOpticalCenter);
       param->setLabel("Optical Center");
       param->setHint("Camera output optical center");
       param->setDisplayRange(-50, -50, 50, 50);
       param->setAnimates(true);
       param->setEnabled(false);
+      param->setUseHostOverlayHandle(false);
       param->setParent(*groupOutput);
     }
     
@@ -449,6 +546,14 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setEnabled(false);
       param->setParent(*groupOutput);
     }
+    
+    {
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputCreateCamera);
+      param->setLabel("Create Camera");
+      param->setHint("Create a linked Nuke camera");
+      param->setEnabled(true);
+      param->setParent(*groupOutput);
+    }
   }
 }
 
@@ -459,5 +564,4 @@ OFX::ImageEffect* CameraLocalizerPluginFactory::createInstance(OfxImageEffectHan
 
 
 } //namespace Localizer
-
 } //namespace openMVG_ofx

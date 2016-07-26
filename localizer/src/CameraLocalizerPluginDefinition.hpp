@@ -13,15 +13,20 @@
 #define kParamOutputIndex "outputIndex"
 #define kParamFeaturesType "featuresType"
 #define kParamFeaturesPreset "featuresPreset"
-#define kParamReconstructionFile "reconstruction"
+#define kParamReconstructionFile "reconstructionFile"
+#define kParamDescriptorsFolder "descriptorsFolder"
 #define kParamVoctreeFile "voctreeFile"
 #define kParamRigMode "rigMode"
+#define kParamRigCalibrationFile "rigCalibrationFile"
 
 
 //Input Parameters
 #define kParamGroupInput(I) "groupInput" + std::to_string(I)
 
-#define kParamInputCalibrationFile(I) "inputCalibrationFile" + std::to_string(I)
+#define kParamInputGroupLensCalibration(I) "groupInputLensCalibration" + std::to_string(I)
+#define kParamInputGroupRelativePose(I) "groupInputRelativePose" + std::to_string(I)
+
+#define kParamInputLensCalibrationFile(I) "inputLensCalibrationFile" + std::to_string(I)
 #define kParamInputDistortion(I) "inputDistortion" + std::to_string(I)
 #define kParamInputDistortionMode(I) "inputDistortionMode" + std::to_string(I)
 #define kParamInputDistortionCoef1(I) "inputDistortionCoef1" + std::to_string(I)
@@ -32,7 +37,7 @@
 #define kParamInputFocalLengthMode(I) "inputFocalLengthMode" + std::to_string(I)
 #define kParamInputFocalLength(I) "inputFocalLength" + std::to_string(I)
 #define kParamInputFocalLengthVarying(I) "inputFocalLengthVarying" + std::to_string(I)
-#define kParamInputGroupRelativePose(I) "groupInputRelativePose" + std::to_string(I)
+#define kParamInputSensorWidth(I) "inputSensorWidth" + std::to_string(I)
 #define kParamInputRelativePoseTranslate(I) "inputRelativePoseTranslate" + std::to_string(I)
 #define kParamInputRelativePoseRotate(I) "inputRelativePoseRotate" + std::to_string(I)
 #define kParamInputRelativePoseScale(I) "inputRelativePoseScale" + std::to_string(I)
@@ -51,6 +56,11 @@
 #define kParamAdvancedBaMinPointVisibility "advancedBaMinPointVisibility"
 #define kParamAdvancedDebugFolder "advancedDebugFolder"
 
+//Tracking
+#define kParamTrackingTrack "trackingTrack"
+#define kParamTrackingRangeMode "trackingRangeMode"
+#define kParamTrackingRangeMin "trackingRangeMin"
+#define kParamTrackingRangeMax "trackingRangeMax"
 
 //Output Parameters
 #define kParamGroupOutput "groupOutput"
@@ -58,21 +68,22 @@
 #define kParamOutputTranslate "outputTranslate"
 #define kParamOutputRotate "outputRotate"
 #define kParamOutputScale "outputScale"
+#define kParamOutputDistortionCoef1 "outputDistortionCoef1"
+#define kParamOutputDistortionCoef2 "outputDistortionCoef2"
+#define kParamOutputDistortionCoef3 "outputDistortionCoef3"
+#define kParamOutputDistortionCoef4 "outputDistortionCoef4"
 #define kParamOutputOpticalCenter "outputOpticalCenter"
 #define kParamOutputFocalLength "outputFocalLength"
 #define kParamOutputNear "outputNear"
 #define kParamOutputFar "outputFar"
-
+#define kParamOutputCreateCamera "outputCreateCamera"
 
 /**
  * Choice Parameter option definition
  */
 
-namespace openMVG_ofx
-{
-
-namespace Localizer
-{
+namespace openMVG_ofx {
+namespace Localizer {
 
 //kParamFeaturesType options
 enum EParamFeaturesType
@@ -83,9 +94,11 @@ enum EParamFeaturesType
 };
 
 static const std::vector< std::pair<std::string, std::string> > kStringParamFeaturesType = {
-  {"SIFT", "SIFT descriptors"},
-  {"CCTag", "CCTag descriptors"},
+  {"SIFT", "SIFT descriptors"}
+#if HAVE_CCTAG
+  ,{"CCTag", "CCTag descriptors"},
   {"SIFT and CCTag", "SIFT and CCTag descriptors"} 
+#endif
 };
 
 
@@ -181,14 +194,24 @@ enum EParamAlgorithm
     eParamAlgorithmCluster
 };
 
-static const std::vector< std::pair<std::string, std::string> > kStringParamAlgorithm = { //TODO FACA
+static const std::vector< std::pair<std::string, std::string> > kStringParamAlgorithm = {
   {"First Best", ""},
   {"Best Result", ""},
   {"All Results", ""},
   {"Cluster", ""}
 };
 
+//kParamTrackingRangeMode options
+enum EParamTrackingRangeMode
+{
+    eParamRangeFromInputs = 0,
+    eParamRangeCustom
+};
+
+static const std::vector< std::pair<std::string, std::string> > kStringParamTrackingRangeMode = { 
+  {"From Inputs", ""},
+  {"Custom", ""}
+};
 
 } //namespace Localizer
-
 } //namespace openMVG_ofx

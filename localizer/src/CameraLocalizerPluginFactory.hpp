@@ -1,11 +1,8 @@
 #pragma once
 #include "ofxsImageEffect.h"
 
-namespace openMVG_ofx
-{
-
-namespace Localizer
-{
+namespace openMVG_ofx {
+namespace Localizer {
 
 /**
  * Plugin Factory declaration
@@ -17,5 +14,4 @@ mDeclarePluginFactory(CameraLocalizerPluginFactory, {}, {});
 
 
 } //namespace Localizer
-
 } //namespace openMVG_ofx

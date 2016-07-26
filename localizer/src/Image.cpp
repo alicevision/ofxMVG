@@ -2,11 +2,8 @@
 #include <cassert>
 #include <iostream>
 
-namespace openMVG_ofx
-{
-
-namespace Localizer
-{
+namespace openMVG_ofx {
+namespace Localizer {
 
 template<typename DataType>
 Image<DataType>::Image()
@@ -20,15 +17,15 @@ Image<DataType>::Image(std::size_t width, std::size_t height, std::size_t nbChan
 }
 
 template<typename DataType>
-Image<DataType>::Image(OFX::Image *imgData)
+Image<DataType>::Image(OFX::Image *imgData, const EImageOrientation orientation)
 {
   std::size_t width = imgData->getRegionOfDefinition().x2 - imgData->getRegionOfDefinition().x1;
   std::size_t height = imgData->getRegionOfDefinition().y2 - imgData->getRegionOfDefinition().y1;
   
   //copy the pointer for delete
   _imgPtr = imgData;
- 
-  setExternalBuffer((DataType*)imgData->getPixelData(), width, height, imgData->getPixelComponentCount(), imgData->getRowBytes() / sizeof(DataType));
+
+  setExternalBuffer((DataType*)imgData->getPixelData(), width, height, imgData->getPixelComponentCount(), imgData->getRowBytes() / sizeof(DataType), orientation);
 }
 
 template<typename DataType>
@@ -52,17 +49,25 @@ void Image<DataType>::createInternalBuffer(std::size_t width, std::size_t height
 }
 
 template<typename DataType>
-void Image<DataType>::setExternalBuffer(DataType *data, std::size_t width, std::size_t height, std::size_t channels, std::size_t rowBufferSize)
+void Image<DataType>::setExternalBuffer(DataType *data, std::size_t width, std::size_t height, std::size_t channels, std::size_t rowBufferSize, const EImageOrientation orientation)
 {
   clear();
-  _data = data;
+  if(orientation == eOrientationBottomUp)
+  {
+    _data = data;
+    _rowBufferSize = rowBufferSize;
+  }
+  else
+  {
+    _data = data + rowBufferSize * (height-1);
+    _rowBufferSize = - rowBufferSize;
+  }
   _hasOwnership = 0;
   _width = width;
   _height = height;
   _nbChannels = channels;
   _size = width * height * _nbChannels;
   _nbPixels = width * height;
-  _rowBufferSize = rowBufferSize;
 }
 
 template<typename DataType>
@@ -230,6 +235,5 @@ template class Image<float>;
 
 
 } //namespace Localizer
-
 } //namespace openMVG_ofx
 

@@ -3,11 +3,14 @@
 #include <cstddef>
 #include <vector>
 
-namespace openMVG_ofx
+namespace openMVG_ofx {
+namespace Localizer {
+  
+enum EImageOrientation
 {
-
-namespace Localizer
-{
+    eOrientationBottomUp = 0,
+    eOrientationTopDown
+};
 
 template<typename DataType>
 class Image
@@ -29,8 +32,9 @@ public:
   /**
    * @brief Image with external buffer constructor
    * @param[in,out] imgData
+   * @parap[in] orientation
    */
-  Image(OFX::Image *imgData);
+  Image(OFX::Image *imgData, const EImageOrientation orientation = eOrientationBottomUp);
 
   /**
    * @brief Copy constructor 
@@ -58,8 +62,9 @@ public:
    * @param[in] height
    * @param[in] channels
    * @param[in] rowBufferSize
+   * @parap[in] orientation
    */
-  void setExternalBuffer(DataType *data, std::size_t width, std::size_t height, std::size_t channels, std::size_t rowBufferSize);
+  void setExternalBuffer(DataType *data, std::size_t width, std::size_t height, std::size_t channels, std::size_t rowBufferSize, const EImageOrientation orientation);
 
   /**
    * @brief Clean image memory
@@ -97,8 +102,8 @@ public:
    * @param other
    */
   void copyFrom(const Image &other);
-
-
+ 
+  
   bool hasOwnership() const
   {
     return _hasOwnership;
@@ -172,8 +177,7 @@ private:
   std::size_t _rowBufferSize = 0;
   std::size_t _channelQuantization = 1 << 12;
 };
-
+  
 
 } //namespace Localizer
-
 } //namespace openMVG_ofx
