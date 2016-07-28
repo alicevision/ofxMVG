@@ -9,7 +9,10 @@
 //Clip
 #define kClip(I) std::to_string(I + 1)
 
-//Global Parameters
+
+//Main Parameters
+#define kParamGroupMain "groupMain"
+
 #define kParamOutputIndex "outputIndex"
 #define kParamFeaturesType "featuresType"
 #define kParamFeaturesPreset "featuresPreset"
@@ -23,24 +26,29 @@
 //Input Parameters
 #define kParamGroupInput(I) "groupInput" + std::to_string(I)
 
-#define kParamInputGroupLensCalibration(I) "groupInputLensCalibration" + std::to_string(I)
-#define kParamInputGroupRelativePose(I) "groupInputRelativePose" + std::to_string(I)
-
+#define kParamInputIsGrayscale(I) "inputIsGrayscale" + std::to_string(I)
 #define kParamInputLensCalibrationFile(I) "inputLensCalibrationFile" + std::to_string(I)
+
+#define kParamInputGroupLensCalibration(I) "groupInputLensCalibration" + std::to_string(I)
+
+#define kParamInputSensorWidth(I) "inputSensorWidth" + std::to_string(I)
+#define kParamInputOpticalCenter(I) "inputOpticalCenter" + std::to_string(I)
+#define kParamInputFocalLengthMode(I) "inputFocalLengthMode" + std::to_string(I)
+#define kParamInputFocalLength(I) "inputFocalLength" + std::to_string(I)
+#define kParamInputFocalLengthVarying(I) "inputFocalLengthVarying" + std::to_string(I)
 #define kParamInputDistortion(I) "inputDistortion" + std::to_string(I)
 #define kParamInputDistortionMode(I) "inputDistortionMode" + std::to_string(I)
 #define kParamInputDistortionCoef1(I) "inputDistortionCoef1" + std::to_string(I)
 #define kParamInputDistortionCoef2(I) "inputDistortionCoef2" + std::to_string(I)
 #define kParamInputDistortionCoef3(I) "inputDistortionCoef3" + std::to_string(I)
 #define kParamInputDistortionCoef4(I) "inputDistortionCoef4" + std::to_string(I)
-#define kParamInputOpticalCenter(I) "inputOpticalCenter" + std::to_string(I)
-#define kParamInputFocalLengthMode(I) "inputFocalLengthMode" + std::to_string(I)
-#define kParamInputFocalLength(I) "inputFocalLength" + std::to_string(I)
-#define kParamInputFocalLengthVarying(I) "inputFocalLengthVarying" + std::to_string(I)
-#define kParamInputSensorWidth(I) "inputSensorWidth" + std::to_string(I)
-#define kParamInputRelativePoseTranslate(I) "inputRelativePoseTranslate" + std::to_string(I)
-#define kParamInputRelativePoseRotate(I) "inputRelativePoseRotate" + std::to_string(I)
-#define kParamInputRelativePoseScale(I) "inputRelativePoseScale" + std::to_string(I)
+
+#define kParamInputGroupRelativePose(I) "groupInputRelativePose" + std::to_string(I)
+
+#define kParamInputRelativePoseRotateM1(I) "inputRelativePoseM1Rotate" + std::to_string(I)
+#define kParamInputRelativePoseRotateM2(I) "inputRelativePoseM2Rotate" + std::to_string(I)
+#define kParamInputRelativePoseRotateM3(I) "inputRelativePoseM3Rotate" + std::to_string(I)
+#define kParamInputRelativePoseCenter(I) "inputRelativePoseCenter" + std::to_string(I)
 
 
 //Advanced Parameters
@@ -54,13 +62,19 @@
 #define kParamAdvancedMatchingError "advancedMatchingError"
 #define kParamAdvancedCctagNbNearestKeyFrames "advancedCctagNbNearestKeyFrames"
 #define kParamAdvancedBaMinPointVisibility "advancedBaMinPointVisibility"
+#define kParamAdvancedDistanceRatio "advancedDistanceRatio"
+#define kParamAdvancedUseGuidedMatching "advancedUseGuidedMatching"
 #define kParamAdvancedDebugFolder "advancedDebugFolder"
+#define kParamAdvancedDebugAlwaysComputeFrame "advancedDebugAlwaysComputeFrame"
 
-//Tracking
+//Tracking Parameters
+#define kParamGroupTracking "groupTracking"
+
 #define kParamTrackingTrack "trackingTrack"
 #define kParamTrackingRangeMode "trackingRangeMode"
 #define kParamTrackingRangeMin "trackingRangeMin"
 #define kParamTrackingRangeMax "trackingRangeMax"
+
 
 //Output Parameters
 #define kParamGroupOutput "groupOutput"
@@ -68,15 +82,27 @@
 #define kParamOutputTranslate "outputTranslate"
 #define kParamOutputRotate "outputRotate"
 #define kParamOutputScale "outputScale"
-#define kParamOutputDistortionCoef1 "outputDistortionCoef1"
-#define kParamOutputDistortionCoef2 "outputDistortionCoef2"
-#define kParamOutputDistortionCoef3 "outputDistortionCoef3"
-#define kParamOutputDistortionCoef4 "outputDistortionCoef4"
 #define kParamOutputOpticalCenter "outputOpticalCenter"
 #define kParamOutputFocalLength "outputFocalLength"
 #define kParamOutputNear "outputNear"
 #define kParamOutputFar "outputFar"
+#define kParamOutputDistortionCoef1 "outputDistortionCoef1"
+#define kParamOutputDistortionCoef2 "outputDistortionCoef2"
+#define kParamOutputDistortionCoef3 "outputDistortionCoef3"
+#define kParamOutputDistortionCoef4 "outputDistortionCoef4"
+#define kParamOutputClear "outputClear"
 #define kParamOutputCreateCamera "outputCreateCamera"
+
+#define kParamOutputGroupError "groupOutputError"
+
+#define kParamOutputErrorMean "outputErrorMean"
+#define kParamOutputErrorMin "outputErrorMin"
+#define kParamOutputErrorMax "outputErrorMax"
+
+
+//Renderer Parameters
+#define kParamForceRenderer "forceRenderer"
+
 
 /**
  * Choice Parameter option definition

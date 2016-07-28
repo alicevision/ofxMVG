@@ -1,4 +1,5 @@
 #include "CameraLocalizer.hpp"
+#include <cmath>
 
 namespace openMVG_ofx {
 namespace Localizer {
@@ -56,6 +57,26 @@ openMVG::localization::VoctreeLocalizer::Algorithm LocalizerProcessData::getAlgo
   }
 }
 
+EParamLensDistortionMode LocalizerProcessData::getLensDistortionModelFromEnum(openMVG::cameras::EINTRINSIC model)
+{
+  switch(model)
+  {
+    case openMVG::cameras::PINHOLE_CAMERA : return eParamLensDistortionModeNone; break;
+    case openMVG::cameras::PINHOLE_CAMERA_RADIAL1 : return eParamLensDistortionModeRadial1; break;
+    case openMVG::cameras::PINHOLE_CAMERA_RADIAL3 : return eParamLensDistortionModeRadial3; break;
+    case openMVG::cameras::PINHOLE_CAMERA_BROWN : return eParamLensDistortionModeFisheye4; break;
+    case openMVG::cameras::PINHOLE_CAMERA_FISHEYE : return eParamLensDistortionModeNone; break;
+    case openMVG::cameras::PINHOLE_CAMERA_FISHEYE1 : return eParamLensDistortionModeFisheye1; break;
+    
+    default : throw std::invalid_argument("Unrecognized Distortion model : " + std::to_string(model));
+  }
+}
+
+std::size_t getParamInputId(const std::string& paramName)
+{
+  std::size_t last_index = paramName.find_last_not_of("0123456789");
+  return std::stoi(paramName.substr(last_index + 1));
+}
 
 void setPoseToParamsAtTime(
     const openMVG::geometry::Pose3 & pose,
@@ -81,7 +102,9 @@ void setPoseToParamsAtTime(
 //  f >> b;
 //  f >> c;
   openMVG::Vec3 rotationAngles = (fixOrientation * pose.rotation()).transpose().eulerAngles(a, b, c);
-  cameraOutputRotate->setValueAtTime(time, rotationAngles(0), rotationAngles(1), rotationAngles(2));
+  
+  double convDeg = 180.0 / M_PI;
+  cameraOutputRotate->setValueAtTime(time, rotationAngles(0) * convDeg, rotationAngles(1) * convDeg, rotationAngles(2) * convDeg);
   
   cameraOutputScale->setValueAtTime(time, 1, 1, 1);
 }
@@ -102,6 +125,21 @@ void setIntrinsicsToParamsAtTime(
 //  }
 }
 
+void setErrorToParamsAtTime(
+    const openMVG::localization::LocalizationResult &localizationResult,
+    const double time,
+    OFX::DoubleParam *outputErrorMean,
+    OFX::DoubleParam *outputErrorMin,
+    OFX::DoubleParam *outputErrorMax)
+{
+    const openMVG::Mat2X residuals = localizationResult.computeResiduals();
+
+    const auto sqrErrors = (residuals.cwiseProduct(residuals)).colwise().sum();
+    
+    outputErrorMean->setValueAtTime(time, std::sqrt(sqrErrors.mean()));
+    outputErrorMin->setValueAtTime(time, std::sqrt(sqrErrors.minCoeff()));
+    outputErrorMax->setValueAtTime(time, std::sqrt(sqrErrors.maxCoeff()));
+}
 
 void convertRGB32ToGRAY8(const Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage)
 {

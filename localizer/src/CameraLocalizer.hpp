@@ -48,10 +48,29 @@ struct LocalizerProcessData
    * @return 
    */
   static openMVG::localization::VoctreeLocalizer::Algorithm getAlgorithm(EParamAlgorithm algorithm);
+  
+  /**
+   * 
+   * @param model
+   * @return 
+   */
+  static EParamLensDistortionMode getLensDistortionModelFromEnum(openMVG::cameras::EINTRINSIC model);
 };
 
 /**
+ * @brief get the digit id of a param name given
+ * @param paramName
+ * @return 
+ */
+std::size_t getParamInputId(const std::string& paramName);
+
+/**
  * @brief Set openMVG pose values into OFX parameters
+ * @param pose
+ * @param time
+ * @param cameraOutputTranslate
+ * @param cameraOutputRotate
+ * @param cameraOutputScale
  */
 void setPoseToParamsAtTime(
     const openMVG::geometry::Pose3 & pose,
@@ -62,6 +81,11 @@ void setPoseToParamsAtTime(
 
 /**
  * @brief Set openMVG intrinsics values into OFX parameters
+ * @param intrinsics
+ * @param time
+ * @param sensorWidth
+ * @param cameraOutputFocalLength
+ * @param cameraOutputOpticalCenter
  */
 void setIntrinsicsToParamsAtTime(
     const openMVG::cameras::Pinhole_Intrinsic& intrinsics,
@@ -69,6 +93,21 @@ void setIntrinsicsToParamsAtTime(
     const double sensorWidth,
     OFX::DoubleParam *cameraOutputFocalLength,
     OFX::Double2DParam *cameraOutputOpticalCenter);
+
+/**
+ * @brief Set openMVG errors values into OFX parameters
+ * @param localizationResult
+ * @param time
+ * @param outputErrorMean
+ * @param outputErrorMin
+ * @param outputErrorMax
+ */
+void setErrorToParamsAtTime(
+    const openMVG::localization::LocalizationResult &localizationResult,
+    const double time,
+    OFX::DoubleParam *outputErrorMean,
+    OFX::DoubleParam *outputErrorMin,
+    OFX::DoubleParam *outputErrorMax);
 
 /**
  * @brief convert a 32 bits float image to a gray (unsigned char) 8 bits image

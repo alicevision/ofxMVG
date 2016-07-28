@@ -24,21 +24,24 @@ private:
   OFX::Clip *_dstClip = fetchClip(kOfxImageEffectOutputClipName); //Destination clip
   
   //Input Parameters
+  OFX::BooleanParam *_inputIsGrayscale[K_MAX_INPUTS];
   OFX::StringParam *_inputLensCalibrationFile[K_MAX_INPUTS];
+  OFX::DoubleParam *_inputSensorWidth[K_MAX_INPUTS];
+  OFX::Double2DParam *_inputOpticalCenter[K_MAX_INPUTS];
+  OFX::ChoiceParam *_inputFocalLengthMode[K_MAX_INPUTS];
+  OFX::DoubleParam *_inputFocalLength[K_MAX_INPUTS];
+  OFX::BooleanParam *_inputFocalLengthVarying[K_MAX_INPUTS];
   OFX::ChoiceParam *_inputLensDistortion[K_MAX_INPUTS];
   OFX::ChoiceParam *_inputLensDistortionMode[K_MAX_INPUTS];
   OFX::DoubleParam *_inputLensDistortionCoef1[K_MAX_INPUTS];
   OFX::DoubleParam *_inputLensDistortionCoef2[K_MAX_INPUTS];
   OFX::DoubleParam *_inputLensDistortionCoef3[K_MAX_INPUTS];
   OFX::DoubleParam *_inputLensDistortionCoef4[K_MAX_INPUTS];
-  OFX::Double2DParam *_inputOpticalCenter[K_MAX_INPUTS];
-  OFX::ChoiceParam *_inputFocalLengthMode[K_MAX_INPUTS];
-  OFX::DoubleParam *_inputFocalLength[K_MAX_INPUTS];
-  OFX::BooleanParam *_inputFocalLengthVarying[K_MAX_INPUTS];
-  OFX::DoubleParam *_inputSensorWidth[K_MAX_INPUTS];
-  OFX::Double3DParam *_inputRelativePoseTranslate[K_MAX_INPUTS];
-  OFX::Double3DParam *_inputRelativePoseRotate[K_MAX_INPUTS];
-  OFX::Double3DParam *_inputRelativePoseScale[K_MAX_INPUTS];
+  OFX::Double3DParam *_inputRelativePoseRotateM1[K_MAX_INPUTS];
+  OFX::Double3DParam *_inputRelativePoseRotateM2[K_MAX_INPUTS];
+  OFX::Double3DParam *_inputRelativePoseRotateM3[K_MAX_INPUTS];
+  OFX::Double3DParam *_inputRelativePoseCenter[K_MAX_INPUTS];
+  OFX::GroupParam *_inputGroupRelativePose[K_MAX_INPUTS];
   
   //Global Parameters
   OFX::ChoiceParam *_featureType = fetchChoiceParam(kParamFeaturesType);
@@ -58,28 +61,45 @@ private:
   OFX::IntParam *_matchingError = fetchIntParam(kParamAdvancedMatchingError);
   OFX::IntParam *_cctagNbNearestKeyFrames = fetchIntParam(kParamAdvancedCctagNbNearestKeyFrames);
   OFX::IntParam *_baMinPointVisibility = fetchIntParam(kParamAdvancedBaMinPointVisibility);
-  OFX::StringParam *_debugFolder = fetchStringParam(kParamAdvancedDebugFolder);    
+  OFX::DoubleParam *_distanceRatio = fetchDoubleParam(kParamAdvancedDistanceRatio);
+  OFX::BooleanParam *_useGuidedMatching = fetchBooleanParam(kParamAdvancedUseGuidedMatching);        
+  OFX::StringParam *_debugFolder = fetchStringParam(kParamAdvancedDebugFolder);
+  OFX::BooleanParam *_alwaysComputeFrame = fetchBooleanParam(kParamAdvancedDebugAlwaysComputeFrame);  
+  
+  //Tracking Parameters
+  OFX::ChoiceParam *_trackingRangeMode = fetchChoiceParam(kParamTrackingRangeMode);
+  OFX::IntParam *_trackingRangeMin = fetchIntParam(kParamTrackingRangeMin);
+  OFX::IntParam *_trackingRangeMax = fetchIntParam(kParamTrackingRangeMax);
+  OFX::PushButtonParam *_trackingButton = fetchPushButtonParam(kParamTrackingTrack);
  
-  //Camera Output Parameters
+  //Output Parameters
   OFX::IntParam *_cameraOutputIndex = fetchIntParam(kParamOutputIndex);
   OFX::Double3DParam *_cameraOutputTranslate = fetchDouble3DParam(kParamOutputTranslate);
   OFX::Double3DParam *_cameraOutputRotate = fetchDouble3DParam(kParamOutputRotate);
   OFX::Double3DParam *_cameraOutputScale = fetchDouble3DParam(kParamOutputScale);
-  OFX::DoubleParam *_cameraOutputLensDistortionCoef1 = fetchDoubleParam(kParamOutputDistortionCoef1);
-  OFX::DoubleParam *_cameraOutputLensDistortionCoef2 = fetchDoubleParam(kParamOutputDistortionCoef2);
-  OFX::DoubleParam *_cameraOutputLensDistortionCoef3 = fetchDoubleParam(kParamOutputDistortionCoef3);
-  OFX::DoubleParam *_cameraOutputLensDistortionCoef4 = fetchDoubleParam(kParamOutputDistortionCoef4);
   OFX::Double2DParam *_cameraOutputOpticalCenter = fetchDouble2DParam(kParamOutputOpticalCenter);
   OFX::DoubleParam *_cameraOutputFocalLength = fetchDoubleParam(kParamOutputFocalLength);
   OFX::DoubleParam *_cameraOutputNear = fetchDoubleParam(kParamOutputNear);
   OFX::DoubleParam *_cameraOutputFar = fetchDoubleParam(kParamOutputFar);
+  OFX::DoubleParam *_cameraOutputLensDistortionCoef1 = fetchDoubleParam(kParamOutputDistortionCoef1);
+  OFX::DoubleParam *_cameraOutputLensDistortionCoef2 = fetchDoubleParam(kParamOutputDistortionCoef2);
+  OFX::DoubleParam *_cameraOutputLensDistortionCoef3 = fetchDoubleParam(kParamOutputDistortionCoef3);
+  OFX::DoubleParam *_cameraOutputLensDistortionCoef4 = fetchDoubleParam(kParamOutputDistortionCoef4);
+  
+  OFX::DoubleParam *_outputErrorMean = fetchDoubleParam(kParamOutputErrorMean);
+  OFX::DoubleParam *_outputErrorMin = fetchDoubleParam(kParamOutputErrorMin);
+  OFX::DoubleParam *_outputErrorMax = fetchDoubleParam(kParamOutputErrorMax);
+  OFX::PushButtonParam *_outputClear = fetchPushButtonParam(kParamOutputClear);
+  
+  //Renderer Parameter
+  OFX::IntParam *_forceRenderer = fetchIntParam(kParamForceRenderer);
   
   //Process Data
   LocalizerProcessData _processData;
   bool _uptodateParam = false;
   bool _uptodateDescriptor = false;
   
-  //
+  //Connected clip index vector
   std::vector<unsigned int> _connectedClipIdx;
   
 public:
@@ -174,10 +194,46 @@ public:
    */
   void updateFocalLength(unsigned int input);
   
+  /**
+   * 
+   */
+  void updateTrackingRangeMode();
   
+  /**
+   * 
+   * @param time
+   * @param inputClipIdx
+   * @param queryIntrinsics
+   */
+  bool getInputIntrinsics(double time, unsigned int inputClipIdx, openMVG::cameras::Pinhole_Intrinsic &queryIntrinsics);
+  
+  /**
+   * 
+   * @param time
+   * @param inputClipIdx
+   * @param outputImage
+   * @return 
+   */
+  bool getInputInGrayScale(double time, unsigned int inputClipIdx, openMVG::image::Image<unsigned char> &outputImage);
+  
+  std::size_t getNbConnectedInput()
+  {
+    return _connectedClipIdx.size();
+  }
+  
+  bool hasInput()
+  {
+    return (_connectedClipIdx.size() > 0);
+  }
+    
   bool isRigInInput()
   {
     return (_connectedClipIdx.size() > 1);
+  }
+  
+  void invalidRender()
+  {
+    _forceRenderer->setValue(1 + _forceRenderer->getValue());
   }
 };
 

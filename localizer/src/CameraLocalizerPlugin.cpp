@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <cassert>
 #include <iostream>
+#include <algorithm>
 
 namespace openMVG_ofx {
 namespace Localizer {
@@ -24,6 +25,7 @@ CameraLocalizerPlugin::CameraLocalizerPlugin(OfxImageEffectHandle handle)
     _srcClip[input] = fetchClip(kClip(input)); 
     
     //Input Parameters
+    _inputIsGrayscale[input] = fetchBooleanParam(kParamInputIsGrayscale(input));
     _inputLensCalibrationFile[input] = fetchStringParam(kParamInputLensCalibrationFile(input));
     _inputLensDistortion[input] = fetchChoiceParam(kParamInputDistortion(input));
     _inputLensDistortionMode[input] = fetchChoiceParam(kParamInputDistortionMode(input));
@@ -34,11 +36,13 @@ CameraLocalizerPlugin::CameraLocalizerPlugin(OfxImageEffectHandle handle)
     _inputOpticalCenter[input] = fetchDouble2DParam(kParamInputOpticalCenter(input));
     _inputFocalLengthMode[input] = fetchChoiceParam(kParamInputFocalLengthMode(input));
     _inputFocalLength[input] = fetchDoubleParam(kParamInputFocalLength(input));
-    _inputFocalLengthVarying[input]= fetchBooleanParam(kParamInputFocalLengthVarying(input));
+    _inputFocalLengthVarying[input] = fetchBooleanParam(kParamInputFocalLengthVarying(input));
     _inputSensorWidth[input] = fetchDoubleParam(kParamInputSensorWidth(input));
-    _inputRelativePoseTranslate[input] = fetchDouble3DParam(kParamInputRelativePoseTranslate(input));
-    _inputRelativePoseRotate[input] = fetchDouble3DParam(kParamInputRelativePoseRotate(input));
-    _inputRelativePoseScale[input] = fetchDouble3DParam(kParamInputRelativePoseScale(input));
+    _inputRelativePoseRotateM1[input] = fetchDouble3DParam(kParamInputRelativePoseRotateM1(input));
+    _inputRelativePoseRotateM2[input] = fetchDouble3DParam(kParamInputRelativePoseRotateM2(input));
+    _inputRelativePoseRotateM3[input] = fetchDouble3DParam(kParamInputRelativePoseRotateM3(input));
+    _inputRelativePoseCenter[input] = fetchDouble3DParam(kParamInputRelativePoseCenter(input));
+    _inputGroupRelativePose[input] = fetchGroupParam(kParamInputGroupRelativePose(input));
   }
   //reset all plugins options;
   reset();
@@ -78,9 +82,7 @@ void CameraLocalizerPlugin::parametersSetup()
       tmpParam->_numCommonViews = 3; // TODO: unused
       tmpParam->_ccTagUseCuda = false;
       tmpParam->_matchingError = _matchingError->getValue();
-      //TODO:
-      // tmpParam->_useGuidedMatching = xxx
-      // tmpParam->_fDistRatio = xxx
+      tmpParam->_useGuidedMatching = _useGuidedMatching->getValue();
 
     } break;
     
@@ -116,10 +118,12 @@ void CameraLocalizerPlugin::parametersSetup()
   _processData.param->_refineIntrinsics = false; //TODO: globalBundle
   _processData.param->_visualDebug = _debugFolder->getValue();
   _processData.param->_errorMax = _reprojectionError->getValue();
+  _processData.param->_fDistRatio = _distanceRatio->getValue();
 }
 
 void CameraLocalizerPlugin::beginSequenceRender(const OFX::BeginSequenceRenderArguments &args)
 {
+  std::cout << "sequence render : begin : " << timeLineGetTime() << std::endl;
   if(!_uptodateParam || !_uptodateDescriptor)
   {
    parametersSetup();
@@ -149,117 +153,155 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
     return;
   }
   
+  //Stop render if the frame already have a keyFrame
+  if((!_alwaysComputeFrame->getValue()) && (_cameraOutputTranslate->getKeyIndex(args.time, OFX::eKeySearchNear) != -1))
+  {
+    std::cout << "render : stopped : frame already computed, time : " << args.time << std::endl;
+    return;
+  }
+
   //Ensure Localizer is correctly initialized
   bool isInit = _processData.localizer->isInit();
   if(!isInit)
   {
-    //setPersistentMessage(OFX::Message::eMessageError, "Cannot initialize the camera localizer.");
     std::cerr << "Cannot initialize the camera localizer at frame " << args.time << "." << std::endl;
     return;
   }
-
+  
+  //Get output index
   int outputIndex = _cameraOutputIndex->getValue() - 1;
   
-  //fetch Image
   if(!_srcClip[outputIndex]->isConnected())
   {
-    std::cout << "unavailable clip"  << std::endl;
+    std::cerr << "invalid output index" << std::endl;
     return;
   }
-  std::cout << "render : fetch input - min range : "  <<  _srcClip[outputIndex]->getFrameRange().min << " - time : " << args.time << std::endl;
 
-  OFX::Image *inputPtr = _srcClip[outputIndex]->fetchImage(args.time);
-
-  if(inputPtr == NULL)
+  //Collect Data
+  std::vector<openMVG::geometry::Pose3 > vecSubPoses;
+  std::vector<openMVG::image::Image<unsigned char> > vecImageGray;
+  std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3 > vecQueryIntrinsics; //TODO : Change for different camera type
+  std::vector<bool> vecHasIntrinsics;
+  
+  vecSubPoses.resize(getNbConnectedInput() - 1); //Don't save main camera
+  vecImageGray.resize(getNbConnectedInput());
+  vecHasIntrinsics.resize(getNbConnectedInput());
+  
+  for(unsigned int i = 0; i < getNbConnectedInput(); ++i)
   {
-    std::cout << "Input image is NULL" << std::endl;
-    return;
+    unsigned int input = _connectedClipIdx[i];
+    
+    if(i > 0) //Don't save main camera
+    {
+      auto &rotate = vecSubPoses[i - 1].rotation();
+      auto &center = vecSubPoses[i - 1].center();
+
+      _inputRelativePoseRotateM1[input]->getValue(rotate(0,0), rotate(0,1), rotate(0,2));
+      _inputRelativePoseRotateM2[input]->getValue(rotate(1,0), rotate(1,1), rotate(1,2));
+      _inputRelativePoseRotateM3[input]->getValue(rotate(2,0), rotate(2,1), rotate(2,2));
+
+      _inputRelativePoseCenter[input]->getValue(center(0), center(1), center(2));
+    }
+
+
+    if(!getInputInGrayScale(args.time, input, vecImageGray[i]))
+    {
+      return;
+    }
+    
+    //TODO : Change for different camera type
+    openMVG::cameras::Pinhole_Intrinsic_Radial_K3 queryIntrinsics(vecImageGray[i].Width(), vecImageGray[i].Height());
+    
+    vecHasIntrinsics[input] = getInputIntrinsics(args.time, input, queryIntrinsics);
+    
+    vecQueryIntrinsics.push_back(queryIntrinsics);
   }
   
-  std::size_t width;
-  std::size_t height;
-  openMVG::image::Image<unsigned char> imageGray;
-  {
-    // Retrieve the input image and convert it to gray 8 bits
-    Image<float> inputImage(inputPtr, eOrientationTopDown);
-    width = inputPtr->getRegionOfDefinition().x2 - inputPtr->getRegionOfDefinition().x1;
-    height = inputPtr->getRegionOfDefinition().y2 - inputPtr->getRegionOfDefinition().y1;
-    std::cout << "render : gray scale input" << std::endl;
-    imageGray.resize(inputImage.getWidth(), inputImage.getHeight());
-//    convertRGB32ToGRAY8(inputImage, imageGray);
-    convertGGG32ToGRAY8(inputImage, imageGray);
-//    openMVG::image::WriteJpg("/tmp/test.jpg", imageGray);
-  }
-
+  //Localization Process
   openMVG::localization::LocalizationResult localizationResult;
+  openMVG::cameras::Pinhole_Intrinsic_Radial_K3 intrinsics;
+  
+  bool localized = false;
   if(isRigInInput())
   {
-    std::cout << "RIG NOT YET IMPLEMENTED" << std::endl;
-    //openMVG::geometry::Pose3 rigPose;
+    openMVG::geometry::Pose3 mainCameraPose;
+    
+    localized = _processData.localizeRig(vecImageGray,
+                            vecQueryIntrinsics,
+                            vecSubPoses,
+                            mainCameraPose);
+    if(localized)
+    {
+      //TODO : add transformation for other camera of the rig
 
-    //TODO
+      setPoseToParamsAtTime(
+               mainCameraPose,
+               args.time,
+               _cameraOutputTranslate,
+               _cameraOutputRotate,
+               _cameraOutputScale);
+    }
+    intrinsics = vecQueryIntrinsics[outputIndex];
   }
   else
   {
-    // TODO: support multiple camera model support
-    openMVG::cameras::Pinhole_Intrinsic_Radial_K3 queryIntrinsics(width, height);
-    EParamLensDistortion lensDistortionType = static_cast<EParamLensDistortion>(_inputLensDistortion[outputIndex]->getValue());
-    const bool hasIntrinsics = lensDistortionType == eParamLensDistortionKnown || lensDistortionType == eParamLensDistortionApproximate;
-    if(hasIntrinsics)
+    localized = _processData.localize(vecImageGray.front(),
+                                          vecHasIntrinsics.front(),
+                                          vecQueryIntrinsics.front(),
+                                          localizationResult);
+    if(localized)
     {
-      std::cout << "Lens distortion to intrinsics" << std::endl;
+      setPoseToParamsAtTime(
+              localizationResult.getPose(),
+              args.time,
+              _cameraOutputTranslate,
+              _cameraOutputRotate,
+              _cameraOutputScale);
 
-      double ppx;
-      double ppy;
-      _inputOpticalCenter[outputIndex]->getValue(ppx, ppy);
+      setIntrinsicsToParamsAtTime(
+              localizationResult.getIntrinsics(),
+              args.time,
+              _inputSensorWidth[outputIndex]->getValue(),
+              _cameraOutputFocalLength,
+              _cameraOutputOpticalCenter);
 
-      queryIntrinsics.updateFromParams({
-        _inputFocalLength[outputIndex]->getValue(),
-        ppx,
-        ppy,
-        _inputLensDistortionCoef1[outputIndex]->getValue(),
-        _inputLensDistortionCoef2[outputIndex]->getValue(),
-        _inputLensDistortionCoef3[outputIndex]->getValue()
-        });
+      setErrorToParamsAtTime(
+              localizationResult,
+              args.time,
+              _outputErrorMean,
+              _outputErrorMin,
+              _outputErrorMax);
+
+      intrinsics = localizationResult.getIntrinsics();
     }
-
-    _processData.localize(imageGray,
-                          hasIntrinsics,
-                          queryIntrinsics,
-                          localizationResult);
   }
 
   //TODO : push_back intermediate data if bundle needed
 
-  //TODO : Set results at time into output camera parameters
-  setPoseToParamsAtTime(
-          localizationResult.getPose(),
-          args.time,
-          _cameraOutputTranslate,
-          _cameraOutputRotate,
-          _cameraOutputScale);
-  
-  setIntrinsicsToParamsAtTime(
-          localizationResult.getIntrinsics(),
-          args.time,
-          _inputSensorWidth[outputIndex]->getValue(),
-          _cameraOutputFocalLength,
-          _cameraOutputOpticalCenter);
-
   std::cout << "render : fetch output "  << std::endl;
 
   OFX::Image *outputPtr = _dstClip->fetchImage(args.time);
-
   if(outputPtr == NULL)
   {
-    std::cout << "Input image is NULL" << std::endl;
     return;
   }
   
   Image<float> outputImage(outputPtr, eOrientationTopDown);
-    
-  std::cout << "render : gray input convert to output F32 "  << std::endl;
-  convertGRAY8ToRGB32(imageGray, outputImage);
+  if(localized)
+  {
+    openMVG::image::Image<unsigned char> undistortedImage;
+    openMVG::cameras::UndistortImage(vecImageGray[outputIndex], &intrinsics, undistortedImage);
+    convertGRAY8ToRGB32(undistortedImage, outputImage);
+  }
+  else
+  {
+    convertGRAY8ToRGB32(vecImageGray[outputIndex], outputImage);
+  }
+  
+  if(_alwaysComputeFrame->getValue())
+  {
+    invalidRender();
+  }
 }
 
 
@@ -276,6 +318,9 @@ void CameraLocalizerPlugin::changedClip(const OFX::InstanceChangedArgs &args, co
     _uptodateParam = false;
     updateConnectedClipIndexCollection();
     updateCameraOutputIndexRange();
+    
+    updateRigOptions();
+    _trackingButton->setEnabled(hasInput());
   }
 }
 
@@ -322,12 +367,130 @@ void CameraLocalizerPlugin::changedParam(const OFX::InstanceChangedArgs &args, c
     updateRigOptions();
     return;
   }
+  
+  if(paramName == kParamRigCalibrationFile)
+  {
+    std::vector<openMVG::geometry::Pose3> subposes;
+    openMVG::rig::loadRigCalibration(_rigCalibrationFile->getValue(), subposes);
+    
+    if(subposes.size() >= K_MAX_INPUTS)
+    {
+      sendMessage(OFX::Message::eMessageWarning, "rig.subpose.file",
+              "The number of cameras in the RIG file contains more cameras than the plugin supports.");
+    }
+    else if(subposes.size() != (getNbConnectedInput() - 1))
+    {
+      sendMessage(OFX::Message::eMessageWarning, "rig.subpose.file",
+              "The number of cameras in the RIG file does not match the number of connected input clips.");
+      return;
+    }
+    
+    const std::size_t nbSubPoses = std::min(subposes.size(), std::size_t(K_MAX_INPUTS - 1));
+    
+    for(unsigned int i = 0; i < nbSubPoses; ++i)
+    {
+      unsigned int input = _connectedClipIdx[i + 1];
+      
+      if(input == 0)
+      {
+        continue;
+      }
+      
+      const auto rotate = subposes[i].rotation();
+      const auto center = subposes[i].center();
+
+      _inputRelativePoseRotateM1[input]->setValue(rotate(0,0), rotate(0,1), rotate(0,2));
+      _inputRelativePoseRotateM2[input]->setValue(rotate(1,0), rotate(1,1), rotate(1,2));
+      _inputRelativePoseRotateM3[input]->setValue(rotate(2,0), rotate(2,1), rotate(2,2));
+      _inputRelativePoseCenter[input]->setValue(center(0), center(1), center(2));
+    }
+    return;
+  }
+
+  //Tracking Range Mode change
+  if(paramName == kParamTrackingRangeMode)
+  {
+    updateTrackingRangeMode();
+    return;
+  }
+  
+  //Tracking button
+  if(paramName == kParamTrackingTrack)
+  {
+    //TODO
+    return;
+  }
+  
+  //Clear Output
+  if(paramName == kParamOutputClear)
+  {
+    _cameraOutputTranslate->deleteAllKeys();
+    _cameraOutputRotate->deleteAllKeys();
+    _cameraOutputScale->deleteAllKeys();
+    _cameraOutputFocalLength->deleteAllKeys();
+    _cameraOutputOpticalCenter->deleteAllKeys();
+    
+    invalidRender();
+    return;
+  }
+  
+  //Input Parameter
+  std::size_t input = getParamInputId(paramName);
+  
+  if((input >= 0) && (input < K_MAX_INPUTS))
+  {
+      if(paramName == kParamInputDistortion(input))
+      {
+        updateLensDistortion(input);
+        return;
+      }
+      
+      if(paramName == kParamInputDistortionMode(input))
+      {
+        updateLensDistortionMode(input);
+        return;
+      }
+      
+      if(paramName == kParamInputFocalLengthMode(input))
+      {
+        updateFocalLength(input);
+        return;
+      }
+      
+      if(paramName == kParamInputLensCalibrationFile(input))
+      {
+        openMVG::cameras::Pinhole_Intrinsic_Radial_K3 intrinsic; //TODO : multiple camera type
+        openMVG::dataio::readCalibrationFromFile(_inputLensCalibrationFile[input]->getValue(), intrinsic);
+        
+        _inputFocalLength[input]->setValue(intrinsic.focal());
+        _inputOpticalCenter[input]->setValue(intrinsic.principal_point()(0), intrinsic.principal_point()(1));
+        _inputLensDistortionMode[input]->setValue(LocalizerProcessData::getLensDistortionModelFromEnum(intrinsic.getType()));
+        
+        const std::vector<double>& parameters = intrinsic.getDistortionParams();
+    
+        if(parameters.size() > 0)
+          _inputLensDistortionCoef1[input]->setValue(parameters[0]);
+        if(parameters.size() > 1)
+          _inputLensDistortionCoef2[input]->setValue(parameters[1]);
+        if(parameters.size() > 2)
+          _inputLensDistortionCoef3[input]->setValue(parameters[2]);
+        if(parameters.size() > 3)
+          _inputLensDistortionCoef4[input]->setValue(parameters[3]);
+        if(parameters.size() > 4)
+          std::cerr << "[CameraLocalizer] Warning: There is some ignored distortion parameters." << std::endl;
+
+        return;
+      }
+  }
+  
 }
 
 void CameraLocalizerPlugin::reset()
 {
   _uptodateParam = false;
   _uptodateDescriptor = false;
+  
+  updateConnectedClipIndexCollection();
   
   for(unsigned int input = 0; input < K_MAX_INPUTS; ++input)
   {
@@ -337,8 +500,10 @@ void CameraLocalizerPlugin::reset()
   }
   
   updateRigOptions();
-  updateConnectedClipIndexCollection();
+  updateTrackingRangeMode();
   updateCameraOutputIndexRange();
+  
+  _trackingButton->setEnabled(hasInput());
 }
 
 void CameraLocalizerPlugin::updateConnectedClipIndexCollection()
@@ -382,20 +547,32 @@ void CameraLocalizerPlugin::updateCameraOutputIndexRange()
 
 void CameraLocalizerPlugin::updateRigOptions()
 {
+  bool unknown = true;
   
-  bool unknown = (static_cast<EParamRigMode>(_rigMode->getValue()) == eParamRigModeUnKnown);
+  if(isRigInInput())
+  {
+    unknown = (static_cast<EParamRigMode>(_rigMode->getValue()) == eParamRigModeUnKnown);
+    _rigMode->setIsSecret(false);
+  }
+  else
+  {
+    _rigMode->setIsSecret(true);
+  }
+  
   _rigCalibrationFile->setIsSecret(unknown);
   for (unsigned int input = 0; input < K_MAX_INPUTS; ++input)
   {
-    _inputRelativePoseTranslate[input]->setIsSecret(unknown);
-    _inputRelativePoseRotate[input]->setIsSecret(unknown);
-    _inputRelativePoseScale[input]->setIsSecret(unknown);
+    _inputRelativePoseRotateM1[input]->setIsSecret(unknown);
+    _inputRelativePoseRotateM2[input]->setIsSecret(unknown);
+    _inputRelativePoseRotateM3[input]->setIsSecret(unknown);
+    _inputRelativePoseCenter[input]->setIsSecret(unknown);
+    _inputGroupRelativePose[input]->setIsSecret(unknown);
   }
 }
 
 void CameraLocalizerPlugin::updateLensDistortion(unsigned int input)
 {
-  bool unknown = (static_cast<EParamLensDistortion>(_rigMode->getValue()) == eParamLensDistortionUnKnown);
+  bool unknown = (static_cast<EParamLensDistortion>(_inputLensDistortion[input]->getValue()) == eParamLensDistortionUnKnown);
   _inputLensDistortionMode[input]->setIsSecret(unknown);
   _inputLensDistortionCoef1[input]->setIsSecret(unknown);
   _inputLensDistortionCoef2[input]->setIsSecret(unknown);
@@ -409,11 +586,72 @@ void CameraLocalizerPlugin::updateLensDistortionMode(unsigned int input)
 
 }
 
+void CameraLocalizerPlugin::updateTrackingRangeMode()
+{
+  bool enabled = (static_cast<EParamTrackingRangeMode>(_trackingRangeMode->getValue()) == eParamRangeCustom);
+  _trackingRangeMin->setEnabled(enabled);
+  _trackingRangeMax->setEnabled(enabled);
+}
+
 void CameraLocalizerPlugin::updateFocalLength(unsigned int input)
 {
-  bool unknown = (static_cast<EParamFocalLengthMode>(_rigMode->getValue()) == eParamFocalLengthModeUnKnown);
+  bool unknown = (static_cast<EParamFocalLengthMode>(_inputFocalLengthMode[input]->getValue()) == eParamFocalLengthModeUnKnown);
   _inputFocalLength[input]->setIsSecret(unknown);
   _inputFocalLengthVarying[input]->setIsSecret(unknown);
+}
+
+bool CameraLocalizerPlugin::getInputIntrinsics(double time, unsigned int inputClipIdx, openMVG::cameras::Pinhole_Intrinsic &queryIntrinsics)
+{
+  EParamLensDistortion lensDistortionType = static_cast<EParamLensDistortion>(_inputLensDistortion[inputClipIdx]->getValue());
+  
+  const bool hasIntrinsics = lensDistortionType == eParamLensDistortionKnown || lensDistortionType == eParamLensDistortionApproximate;
+  
+  if(!hasIntrinsics)
+  {
+    return false;
+  }
+  
+  double ppx;
+  double ppy;
+
+  _inputOpticalCenter[inputClipIdx]->getValue(ppx, ppy);
+
+  //TODO : Change for different camera type
+  queryIntrinsics.updateFromParams({
+    _inputFocalLength[inputClipIdx]->getValueAtTime(time),
+    ppx,
+    ppy,
+    _inputLensDistortionCoef1[inputClipIdx]->getValue(),
+    _inputLensDistortionCoef2[inputClipIdx]->getValue(),
+    _inputLensDistortionCoef3[inputClipIdx]->getValue()
+  });
+
+  return true;
+}
+
+bool CameraLocalizerPlugin::getInputInGrayScale(double time, unsigned int inputClipIdx, openMVG::image::Image<unsigned char> &outputImage)
+{
+  OFX::Image *inputPtr = _srcClip[inputClipIdx]->fetchImage(time);
+
+  if(inputPtr == NULL)
+  {
+    return false;
+  }
+  
+  Image<float> inputImage(inputPtr, eOrientationTopDown);
+  
+  outputImage.resize(inputImage.getWidth(), inputImage.getHeight());
+  
+  if(_inputIsGrayscale[inputClipIdx]->getValue())
+  {
+    convertGGG32ToGRAY8(inputImage, outputImage);
+  }
+  else
+  {
+    convertRGB32ToGRAY8(inputImage, outputImage);
+  }
+  
+  return true;
 }
 
 } //namespace Localizer
