@@ -2,7 +2,7 @@
 #include "ofxsImageEffect.h"
 #include "CameraLocalizer.hpp"
 #include "CameraLocalizerPluginFactory.hpp"
-#include"CameraLocalizerPluginDefinition.hpp"
+#include "CameraLocalizerPluginDefinition.hpp"
 
 //Maximum number of input clip 
 #define K_MAX_INPUTS 5
@@ -15,7 +15,7 @@ namespace Localizer {
  * @brief CameraLocalizerPlugin Class
  */
 class CameraLocalizerPlugin : public OFX::ImageEffect 
-{   
+{
 private:
   //(!) Don't delete these, OFX::ImageEffect is managing them
   
@@ -91,17 +91,21 @@ private:
   OFX::DoubleParam *_outputErrorMax = fetchDoubleParam(kParamOutputErrorMax);
   OFX::PushButtonParam *_outputClear = fetchPushButtonParam(kParamOutputClear);
   
-  //Renderer Parameter
-  OFX::IntParam *_forceRenderer = fetchIntParam(kParamForceRenderer);
+  // Invalidation Parameters
+  OFX::IntParam *_forceInvalidation = fetchIntParam(kParamForceInvalidation);
+  OFX::IntParam *_forceInvalidationAtTime = fetchIntParam(kParamForceInvalidationAtTime);
   
   //Process Data
   LocalizerProcessData _processData;
   bool _uptodateParam = false;
   bool _uptodateDescriptor = false;
-  
+
   //Connected clip index vector
   std::vector<unsigned int> _connectedClipIdx;
-  
+
+  // cache
+  std::map<OfxTime, openMVG::localization::LocalizationResult> _localizationResultsAtTime;
+
 public:
   
   /**
@@ -230,11 +234,27 @@ public:
   {
     return (_connectedClipIdx.size() > 1);
   }
-  
+
   void invalidRender()
   {
-    _forceRenderer->setValue(1 + _forceRenderer->getValue());
+    _forceInvalidation->setValue(1 + _forceInvalidation->getValue());
   }
+
+  void invalidRenderAtTime(OfxTime time)
+  {
+    _forceInvalidationAtTime->setValue(1 + _forceInvalidationAtTime->getValue());
+  }
+
+  bool hasCachedLocalizationResults(OfxTime time) const
+  {
+    return _localizationResultsAtTime.find(time) != _localizationResultsAtTime.end();
+  }
+
+  const openMVG::localization::LocalizationResult& getCachedLocalizationResults(OfxTime time) const
+  {
+    return _localizationResultsAtTime.at(time);
+  }
+
 };
 
 

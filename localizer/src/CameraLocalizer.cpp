@@ -75,6 +75,8 @@ EParamLensDistortionMode LocalizerProcessData::getLensDistortionModelFromEnum(op
 std::size_t getParamInputId(const std::string& paramName)
 {
   std::size_t last_index = paramName.find_last_not_of("0123456789");
+  if(last_index >= paramName.size())
+    return std::string::npos;
   return std::stoi(paramName.substr(last_index + 1));
 }
 

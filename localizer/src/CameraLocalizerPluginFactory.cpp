@@ -1,6 +1,8 @@
 #include "CameraLocalizerPluginFactory.hpp"
 #include "CameraLocalizerPluginDefinition.hpp"
 #include "CameraLocalizerPlugin.hpp"
+#include "CameraLocalizerInteract.hpp"
+
 #include <array>
 
 /**
@@ -55,6 +57,8 @@ void CameraLocalizerPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
   desc.setTemporalClipAccess(false);
   desc.setRenderTwiceAlways(false);
   desc.setSupportsMultipleClipPARs(false);
+
+  desc.setOverlayInteractDescriptor( new CameraLocalizerOverlayDescriptor);
 }
 
 void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
@@ -551,7 +555,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setEvaluateOnChange(false);
       param->setCanUndo(false);
       param->setParent(*groupOutput);
-    }      
+    }
 
     {
       OFX::Double3DParamDescriptor *param = desc.defineDouble3DParam(kParamOutputScale);
@@ -704,13 +708,21 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     }
 
     {
-      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputClear);
-      param->setLabel("Clear key frames cache");
-      param->setHint("Clear key frames cache");
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputClearCurrentFrame);
+      param->setLabel("Clear Current Frame");
+      param->setHint("Clear current frame values and cache");
       param->setEnabled(true);
       param->setParent(*groupOutput);
     }
-    
+
+    {
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputClear);
+      param->setLabel("Clear All");
+      param->setHint("Clear all output values and cache");
+      param->setEnabled(true);
+      param->setParent(*groupOutput);
+    }
+
     {
       OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputCreateCamera);
       param->setLabel("Create Camera");
@@ -721,9 +733,18 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
   }
   
   {
-    OFX::IntParamDescriptor *param = desc.defineIntParam(kParamForceRenderer);
-    param->setLabel("Force renderer");
+    OFX::IntParamDescriptor *param = desc.defineIntParam(kParamForceInvalidation);
+    param->setLabel("Force Invalidation");
     param->setHint("Allow the plugin to force the host to render");
+    param->setIsSecret(true);
+    param->setEnabled(false);
+    param->setCanUndo(false);
+  }
+  
+  {
+    OFX::IntParamDescriptor *param = desc.defineIntParam(kParamForceInvalidationAtTime);
+    param->setLabel("Force Invalidation At Time");
+    param->setHint("Allow the plugin to force the host to render at a specific time");
     param->setIsSecret(true);
     param->setEnabled(false);
     param->setCanUndo(false);

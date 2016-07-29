@@ -152,140 +152,160 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
     std::cout << "render : abort" << std::endl;
     return;
   }
-  
-  //Stop render if the frame already have a keyFrame
-  if((!_alwaysComputeFrame->getValue()) && (_cameraOutputTranslate->getKeyIndex(args.time, OFX::eKeySearchNear) != -1))
-  {
-    std::cout << "render : stopped : frame already computed, time : " << args.time << std::endl;
-    return;
-  }
 
-  //Ensure Localizer is correctly initialized
-  bool isInit = _processData.localizer->isInit();
-  if(!isInit)
-  {
-    std::cerr << "Cannot initialize the camera localizer at frame " << args.time << "." << std::endl;
-    return;
-  }
-  
   //Get output index
   int outputIndex = _cameraOutputIndex->getValue() - 1;
-  
+
   if(!_srcClip[outputIndex]->isConnected())
   {
     std::cerr << "invalid output index" << std::endl;
     return;
   }
-
-  //Collect Data
-  std::vector<openMVG::geometry::Pose3 > vecSubPoses;
-  std::vector<openMVG::image::Image<unsigned char> > vecImageGray;
-  std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3 > vecQueryIntrinsics; //TODO : Change for different camera type
-  std::vector<bool> vecHasIntrinsics;
   
-  vecSubPoses.resize(getNbConnectedInput() - 1); //Don't save main camera
-  vecImageGray.resize(getNbConnectedInput());
-  vecHasIntrinsics.resize(getNbConnectedInput());
+  //Localization Process
+  bool localized = false;
+  openMVG::localization::LocalizationResult localizationResult;
+  openMVG::cameras::Pinhole_Intrinsic_Radial_K3 intrinsics;
   
+  std::vector<openMVG::image::Image<unsigned char> > vecImageGray(getNbConnectedInput());
   for(unsigned int i = 0; i < getNbConnectedInput(); ++i)
   {
     unsigned int input = _connectedClipIdx[i];
-    
-    if(i > 0) //Don't save main camera
-    {
-      auto &rotate = vecSubPoses[i - 1].rotation();
-      auto &center = vecSubPoses[i - 1].center();
-
-      _inputRelativePoseRotateM1[input]->getValue(rotate(0,0), rotate(0,1), rotate(0,2));
-      _inputRelativePoseRotateM2[input]->getValue(rotate(1,0), rotate(1,1), rotate(1,2));
-      _inputRelativePoseRotateM3[input]->getValue(rotate(2,0), rotate(2,1), rotate(2,2));
-
-      _inputRelativePoseCenter[input]->getValue(center(0), center(1), center(2));
-    }
-
-
     if(!getInputInGrayScale(args.time, input, vecImageGray[i]))
     {
       return;
     }
-    
-    //TODO : Change for different camera type
-    openMVG::cameras::Pinhole_Intrinsic_Radial_K3 queryIntrinsics(vecImageGray[i].Width(), vecImageGray[i].Height());
-    
-    vecHasIntrinsics[input] = getInputIntrinsics(args.time, input, queryIntrinsics);
-    
-    vecQueryIntrinsics.push_back(queryIntrinsics);
   }
-  
-  //Localization Process
-  openMVG::localization::LocalizationResult localizationResult;
-  openMVG::cameras::Pinhole_Intrinsic_Radial_K3 intrinsics;
-  
-  bool localized = false;
-  if(isRigInInput())
-  {
-    openMVG::geometry::Pose3 mainCameraPose;
-    
-    localized = _processData.localizeRig(vecImageGray,
-                            vecQueryIntrinsics,
-                            vecSubPoses,
-                            mainCameraPose);
-    if(localized)
-    {
-      //TODO : add transformation for other camera of the rig
 
-      setPoseToParamsAtTime(
-               mainCameraPose,
-               args.time,
-               _cameraOutputTranslate,
-               _cameraOutputRotate,
-               _cameraOutputScale);
-    }
-    intrinsics = vecQueryIntrinsics[outputIndex];
+  // Don't launch the tracker if we already have a keyFrame at current time.
+  // We only need to provide the output image to nuke.
+  if(!_alwaysComputeFrame->getValue() &&
+     (_cameraOutputTranslate->getKeyIndex(args.time, OFX::eKeySearchNear) != -1) &&
+      hasCachedLocalizationResults(args.time) // TODO: remove and read intrinsics from output parameters
+      )
+  {
+    std::cout << "render : stopped : frame already computed, time : " << args.time << std::endl;
+    localized = true;
+    if(hasCachedLocalizationResults(args.time))
+      localizationResult = getCachedLocalizationResults(args.time);
+    // TODO: read intrinsics from output params
+    intrinsics = localizationResult.getIntrinsics();
   }
   else
   {
-    localized = _processData.localize(vecImageGray.front(),
-                                          vecHasIntrinsics.front(),
-                                          vecQueryIntrinsics.front(),
-                                          localizationResult);
-    if(localized)
+    //Ensure Localizer is correctly initialized
+    bool isInit = _processData.localizer->isInit();
+    if(!isInit)
     {
-      setPoseToParamsAtTime(
-              localizationResult.getPose(),
-              args.time,
-              _cameraOutputTranslate,
-              _cameraOutputRotate,
-              _cameraOutputScale);
+      std::cerr << "Cannot initialize the camera localizer at frame " << args.time << "." << std::endl;
+      return;
+    }
 
-      setIntrinsicsToParamsAtTime(
-              localizationResult.getIntrinsics(),
-              args.time,
-              _inputSensorWidth[outputIndex]->getValue(),
-              _cameraOutputFocalLength,
-              _cameraOutputOpticalCenter);
+    //Collect Data
+    std::vector<openMVG::geometry::Pose3 > vecSubPoses(getNbConnectedInput() - 1); //Don't save main camera
+    std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3 > vecQueryIntrinsics; //TODO : Change for different camera type
+    std::vector<bool> vecHasIntrinsics(getNbConnectedInput());
 
-      setErrorToParamsAtTime(
-              localizationResult,
-              args.time,
-              _outputErrorMean,
-              _outputErrorMin,
-              _outputErrorMax);
+    for(unsigned int i = 0; i < getNbConnectedInput(); ++i)
+    {
+      unsigned int input = _connectedClipIdx[i];
 
-      intrinsics = localizationResult.getIntrinsics();
+      if(i > 0) //Don't save main camera
+      {
+        auto &rotate = vecSubPoses[i - 1].rotation();
+        auto &center = vecSubPoses[i - 1].center();
+
+        _inputRelativePoseRotateM1[input]->getValue(rotate(0,0), rotate(0,1), rotate(0,2));
+        _inputRelativePoseRotateM2[input]->getValue(rotate(1,0), rotate(1,1), rotate(1,2));
+        _inputRelativePoseRotateM3[input]->getValue(rotate(2,0), rotate(2,1), rotate(2,2));
+
+        _inputRelativePoseCenter[input]->getValue(center(0), center(1), center(2));
+      }
+
+      //TODO : Change for different camera type
+      openMVG::cameras::Pinhole_Intrinsic_Radial_K3 queryIntrinsics(vecImageGray[i].Width(), vecImageGray[i].Height());
+
+      vecHasIntrinsics[input] = getInputIntrinsics(args.time, input, queryIntrinsics);
+
+      vecQueryIntrinsics.push_back(queryIntrinsics);
+    }
+
+    if(isRigInInput())
+    {
+      openMVG::geometry::Pose3 mainCameraPose;
+
+      localized = _processData.localizeRig(vecImageGray,
+                              vecQueryIntrinsics,
+                              vecSubPoses,
+                              mainCameraPose);
+      if(localized)
+      {
+        //TODO : add transformation for other camera of the rig
+
+        setPoseToParamsAtTime(
+                 mainCameraPose,
+                 args.time,
+                 _cameraOutputTranslate,
+                 _cameraOutputRotate,
+                 _cameraOutputScale);
+      }
+      intrinsics = vecQueryIntrinsics[outputIndex];
+    }
+    else
+    {
+      localized = _processData.localize(vecImageGray.front(),
+                                            vecHasIntrinsics.front(),
+                                            vecQueryIntrinsics.front(),
+                                            localizationResult);
+      if(localized)
+      {
+        setPoseToParamsAtTime(
+                localizationResult.getPose(),
+                args.time,
+                _cameraOutputTranslate,
+                _cameraOutputRotate,
+                _cameraOutputScale);
+
+        setIntrinsicsToParamsAtTime(
+                localizationResult.getIntrinsics(),
+                args.time,
+                _inputSensorWidth[outputIndex]->getValue(),
+                _cameraOutputFocalLength,
+                _cameraOutputOpticalCenter);
+
+        setErrorToParamsAtTime(
+                localizationResult,
+                args.time,
+                _outputErrorMean,
+                _outputErrorMin,
+                _outputErrorMax);
+
+        _localizationResultsAtTime[args.time] = localizationResult;
+        intrinsics = localizationResult.getIntrinsics();
+      }
+    }
+
+    if(!localized)
+    {
+      _localizationResultsAtTime.erase(args.time);
+
+      _cameraOutputTranslate->deleteKeyAtTime(args.time);
+      _cameraOutputRotate->deleteKeyAtTime(args.time);
+      _cameraOutputScale->deleteKeyAtTime(args.time);
+      _cameraOutputFocalLength->deleteKeyAtTime(args.time);
+      _cameraOutputOpticalCenter->deleteKeyAtTime(args.time);
     }
   }
-
-  //TODO : push_back intermediate data if bundle needed
 
   std::cout << "render : fetch output "  << std::endl;
 
   OFX::Image *outputPtr = _dstClip->fetchImage(args.time);
   if(outputPtr == NULL)
   {
+    std::cout << "Output image is NULL" << std::endl;
     return;
   }
-  
+
   Image<float> outputImage(outputPtr, eOrientationTopDown);
   if(localized)
   {
@@ -297,11 +317,12 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
   {
     convertGRAY8ToRGB32(vecImageGray[outputIndex], outputImage);
   }
-  
+
   if(_alwaysComputeFrame->getValue())
   {
     invalidRender();
   }
+  this->redrawOverlays();
 }
 
 
@@ -318,7 +339,7 @@ void CameraLocalizerPlugin::changedClip(const OFX::InstanceChangedArgs &args, co
     _uptodateParam = false;
     updateConnectedClipIndexCollection();
     updateCameraOutputIndexRange();
-    
+
     updateRigOptions();
     _trackingButton->setEnabled(hasInput());
   }
@@ -421,7 +442,20 @@ void CameraLocalizerPlugin::changedParam(const OFX::InstanceChangedArgs &args, c
     return;
   }
   
-  //Clear Output
+  //Clear Current Frame
+  if(paramName == kParamOutputClearCurrentFrame)
+  {
+    _cameraOutputTranslate->deleteKeyAtTime(args.time);
+    _cameraOutputRotate->deleteKeyAtTime(args.time);
+    _cameraOutputScale->deleteKeyAtTime(args.time);
+    _cameraOutputFocalLength->deleteKeyAtTime(args.time);
+    _cameraOutputOpticalCenter->deleteKeyAtTime(args.time);
+    
+    invalidRenderAtTime(args.time);
+    return;
+  }
+  
+  //Clear All
   if(paramName == kParamOutputClear)
   {
     _cameraOutputTranslate->deleteAllKeys();

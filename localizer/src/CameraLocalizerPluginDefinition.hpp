@@ -91,6 +91,7 @@
 #define kParamOutputDistortionCoef3 "outputDistortionCoef3"
 #define kParamOutputDistortionCoef4 "outputDistortionCoef4"
 #define kParamOutputClear "outputClear"
+#define kParamOutputClearCurrentFrame "outputClearCurrentFrame"
 #define kParamOutputCreateCamera "outputCreateCamera"
 
 #define kParamOutputGroupError "groupOutputError"
@@ -100,8 +101,9 @@
 #define kParamOutputErrorMax "outputErrorMax"
 
 
-//Renderer Parameters
-#define kParamForceRenderer "forceRenderer"
+// Invalidation Parameters
+#define kParamForceInvalidation "forceInvalidation"
+#define kParamForceInvalidationAtTime "forceInvalidationAtTime"
 
 
 /**
@@ -122,8 +124,8 @@ enum EParamFeaturesType
 static const std::vector< std::pair<std::string, std::string> > kStringParamFeaturesType = {
   {"SIFT", "SIFT descriptors"}
 #if HAVE_CCTAG
-  ,{"CCTag", "CCTag descriptors"},
-  {"SIFT and CCTag", "SIFT and CCTag descriptors"} 
+  ,{"CCTag", "CCTag descriptors"}
+  ,{"SIFT and CCTag", "SIFT and CCTag descriptors"} 
 #endif
 };
 
