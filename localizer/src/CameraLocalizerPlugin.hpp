@@ -75,29 +75,29 @@ private:
  
   //Output Parameters
   OFX::IntParam *_cameraOutputIndex = fetchIntParam(kParamOutputIndex);
-  OFX::Double3DParam *_cameraOutputTranslate = fetchDouble3DParam(kParamOutputTranslate);
-  OFX::Double3DParam *_cameraOutputRotate = fetchDouble3DParam(kParamOutputRotate);
-  OFX::Double3DParam *_cameraOutputScale = fetchDouble3DParam(kParamOutputScale);
-  OFX::Double2DParam *_cameraOutputOpticalCenter = fetchDouble2DParam(kParamOutputOpticalCenter);
-  OFX::DoubleParam *_cameraOutputFocalLength = fetchDoubleParam(kParamOutputFocalLength);
-  OFX::DoubleParam *_cameraOutputNear = fetchDoubleParam(kParamOutputNear);
-  OFX::DoubleParam *_cameraOutputFar = fetchDoubleParam(kParamOutputFar);
-  OFX::DoubleParam *_cameraOutputLensDistortionCoef1 = fetchDoubleParam(kParamOutputDistortionCoef1);
-  OFX::DoubleParam *_cameraOutputLensDistortionCoef2 = fetchDoubleParam(kParamOutputDistortionCoef2);
-  OFX::DoubleParam *_cameraOutputLensDistortionCoef3 = fetchDoubleParam(kParamOutputDistortionCoef3);
-  OFX::DoubleParam *_cameraOutputLensDistortionCoef4 = fetchDoubleParam(kParamOutputDistortionCoef4);
+  OFX::Double3DParam *_cameraOutputTranslate[K_MAX_INPUTS];
+  OFX::Double3DParam *_cameraOutputRotate[K_MAX_INPUTS];
+  OFX::Double3DParam *_cameraOutputScale[K_MAX_INPUTS];
+  OFX::Double2DParam *_cameraOutputOpticalCenter[K_MAX_INPUTS];
+  OFX::DoubleParam *_cameraOutputFocalLength[K_MAX_INPUTS];
+  OFX::DoubleParam *_cameraOutputNear[K_MAX_INPUTS];
+  OFX::DoubleParam *_cameraOutputFar[K_MAX_INPUTS];
+  OFX::DoubleParam *_cameraOutputLensDistortionCoef1[K_MAX_INPUTS];
+  OFX::DoubleParam *_cameraOutputLensDistortionCoef2[K_MAX_INPUTS];
+  OFX::DoubleParam *_cameraOutputLensDistortionCoef3[K_MAX_INPUTS];
+  OFX::DoubleParam *_cameraOutputLensDistortionCoef4[K_MAX_INPUTS];
+  OFX::DoubleParam *_outputStatErrorMean[K_MAX_INPUTS];
+  OFX::DoubleParam *_outputStatErrorMin[K_MAX_INPUTS];
+  OFX::DoubleParam *_outputStatErrorMax[K_MAX_INPUTS];
+  OFX::DoubleParam *_outputStatNbMatchedImages[K_MAX_INPUTS];
+  OFX::DoubleParam *_outputStatNbDetectedFeatures[K_MAX_INPUTS];
+  OFX::DoubleParam *_outputStatNbMatchedFeatures[K_MAX_INPUTS];
+  OFX::DoubleParam *_outputStatNbInlierFeatures[K_MAX_INPUTS];
   
-  OFX::DoubleParam *_outputStatErrorMean = fetchDoubleParam(kParamOutputStatErrorMean);
-  OFX::DoubleParam *_outputStatErrorMin = fetchDoubleParam(kParamOutputStatErrorMin);
-  OFX::DoubleParam *_outputStatErrorMax = fetchDoubleParam(kParamOutputStatErrorMax);
-  OFX::DoubleParam *_outputStatNbMatchedImages = fetchDoubleParam(kParamOutputStatNbMatchedImages);
-  OFX::DoubleParam *_outputStatNbDetectedFeatures = fetchDoubleParam(kParamOutputStatNbDetectedFeatures);
-  OFX::DoubleParam *_outputStatNbMatchedFeatures = fetchDoubleParam(kParamOutputStatNbMatchedFeatures);
-  OFX::DoubleParam *_outputStatNbInlierFeatures = fetchDoubleParam(kParamOutputStatNbInlierFeatures);
-  
+  //Output Cache Parameters
   OFX::PushButtonParam *_outputClear = fetchPushButtonParam(kParamOutputClear);
   
-  // Invalidation Parameters
+  //Invalidation Parameters
   OFX::IntParam *_forceInvalidation = fetchIntParam(kParamForceInvalidation);
   OFX::IntParam *_forceInvalidationAtTime = fetchIntParam(kParamForceInvalidationAtTime);
   
@@ -109,22 +109,10 @@ private:
   //Connected clip index vector
   std::vector<unsigned int> _connectedClipIdx;
 
-  std::vector<OFX::ValueParam*> _outputParams = {
-      _cameraOutputTranslate,
-      _cameraOutputRotate,
-      _cameraOutputScale,
-      _cameraOutputFocalLength,
-      _cameraOutputOpticalCenter,
-      _outputStatErrorMean,
-      _outputStatErrorMin,
-      _outputStatErrorMax,
-      _outputStatNbMatchedImages,
-      _outputStatNbDetectedFeatures,
-      _outputStatNbMatchedFeatures,
-      _outputStatNbInlierFeatures
-    };
+  //Output Parameters List
+  std::vector<OFX::ValueParam*> _outputParams;
 
-  // cache
+  //Cache
   std::map<OfxTime, openMVG::localization::LocalizationResult> _localizationResultsAtTime;
   std::map<OfxTime, std::vector<openMVG::features::SIOPointFeature> > _extractedFeaturesAtTime;
 
@@ -298,6 +286,16 @@ public:
   const openMVG::localization::LocalizationResult& getCachedLocalizationResults(OfxTime time) const
   {
     return _localizationResultsAtTime.at(time);
+  }
+  
+  bool hasAllOutputParamKey(OfxTime time) const
+  {
+    for(auto input : _connectedClipIdx)
+    {
+     if(_cameraOutputTranslate[input]->getKeyIndex(time, OFX::eKeySearchNear) == -1)
+       return false;
+    }
+    return true;
   }
 
   bool hasCachedFeatures(OfxTime time) const

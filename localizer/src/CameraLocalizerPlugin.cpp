@@ -43,6 +43,39 @@ CameraLocalizerPlugin::CameraLocalizerPlugin(OfxImageEffectHandle handle)
     _inputRelativePoseRotateM3[input] = fetchDouble3DParam(kParamInputRelativePoseRotateM3(input));
     _inputRelativePoseCenter[input] = fetchDouble3DParam(kParamInputRelativePoseCenter(input));
     _inputGroupRelativePose[input] = fetchGroupParam(kParamInputGroupRelativePose(input));
+    
+    //Output Parameters
+    _cameraOutputTranslate[input] = fetchDouble3DParam(kParamOutputTranslate(input));
+    _cameraOutputRotate[input] = fetchDouble3DParam(kParamOutputRotate(input));
+    _cameraOutputScale[input] = fetchDouble3DParam(kParamOutputScale(input));
+    _cameraOutputOpticalCenter[input] = fetchDouble2DParam(kParamOutputOpticalCenter(input));
+    _cameraOutputFocalLength[input] = fetchDoubleParam(kParamOutputFocalLength(input));
+    _cameraOutputNear[input] = fetchDoubleParam(kParamOutputNear(input));
+    _cameraOutputFar[input] = fetchDoubleParam(kParamOutputFar(input));
+    _cameraOutputLensDistortionCoef1[input] = fetchDoubleParam(kParamOutputDistortionCoef1(input));
+    _cameraOutputLensDistortionCoef2[input] = fetchDoubleParam(kParamOutputDistortionCoef2(input));
+    _cameraOutputLensDistortionCoef3[input] = fetchDoubleParam(kParamOutputDistortionCoef3(input));
+    _cameraOutputLensDistortionCoef4[input] = fetchDoubleParam(kParamOutputDistortionCoef4(input));
+    _outputStatErrorMean[input] = fetchDoubleParam(kParamOutputStatErrorMean(input));
+    _outputStatErrorMin[input] = fetchDoubleParam(kParamOutputStatErrorMin(input));
+    _outputStatErrorMax[input] = fetchDoubleParam(kParamOutputStatErrorMax(input));
+    _outputStatNbMatchedImages[input] = fetchDoubleParam(kParamOutputStatNbMatchedImages(input));
+    _outputStatNbDetectedFeatures[input] = fetchDoubleParam(kParamOutputStatNbDetectedFeatures(input));
+    _outputStatNbMatchedFeatures[input] = fetchDoubleParam(kParamOutputStatNbMatchedFeatures(input));
+    _outputStatNbInlierFeatures[input] = fetchDoubleParam(kParamOutputStatNbInlierFeatures(input));
+    
+    _outputParams.push_back(_cameraOutputTranslate[input]);
+    _outputParams.push_back(_cameraOutputRotate[input]);
+    _outputParams.push_back(_cameraOutputScale[input]);
+    _outputParams.push_back(_cameraOutputFocalLength[input]);
+    _outputParams.push_back(_cameraOutputOpticalCenter[input]);
+    _outputParams.push_back(_outputStatErrorMean[input]);
+    _outputParams.push_back(_outputStatErrorMin[input]);
+    _outputParams.push_back(_outputStatErrorMax[input]);
+    _outputParams.push_back(_outputStatNbMatchedImages[input]);
+    _outputParams.push_back(_outputStatNbDetectedFeatures[input]);
+    _outputParams.push_back(_outputStatNbMatchedFeatures[input]);
+    _outputParams.push_back(_outputStatNbInlierFeatures[input]);
   }
   //reset all plugins options;
   reset();
@@ -180,7 +213,7 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
   // Don't launch the tracker if we already have a keyFrame at current time.
   // We only need to provide the output image to nuke.
   if(!_alwaysComputeFrame->getValue() &&
-     (_cameraOutputTranslate->getKeyIndex(args.time, OFX::eKeySearchNear) != -1) &&
+      hasAllOutputParamKey(args.time)  && 
       hasCachedLocalizationResults(args.time) // TODO: remove and read intrinsics from output parameters
       )
   {
@@ -245,9 +278,9 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
         setPoseToParamsAtTime(
                  mainCameraPose,
                  args.time,
-                 _cameraOutputTranslate,
-                 _cameraOutputRotate,
-                 _cameraOutputScale);
+                 _cameraOutputTranslate[outputIndex],
+                 _cameraOutputRotate[outputIndex],
+                 _cameraOutputScale[outputIndex]);
       }
       intrinsics = vecQueryIntrinsics[outputIndex];
     }
@@ -279,28 +312,28 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
         setPoseToParamsAtTime(
                 localizationResult.getPose(),
                 args.time,
-                _cameraOutputTranslate,
-                _cameraOutputRotate,
-                _cameraOutputScale);
+                _cameraOutputTranslate[outputIndex],
+                _cameraOutputRotate[outputIndex],
+                _cameraOutputScale[outputIndex]);
 
         setIntrinsicsToParamsAtTime(
                 localizationResult.getIntrinsics(),
                 args.time,
                 _inputSensorWidth[outputIndex]->getValue(),
-                _cameraOutputFocalLength,
-                _cameraOutputOpticalCenter);
+                _cameraOutputFocalLength[outputIndex],
+                _cameraOutputOpticalCenter[outputIndex]);
 
         setStatToParamsAtTime(
                 localizationResult,
                 _extractedFeaturesAtTime.at(args.time),
                 args.time,
-                _outputStatErrorMean,
-                _outputStatErrorMin,
-                _outputStatErrorMax,
-                _outputStatNbMatchedImages,
-                _outputStatNbDetectedFeatures,
-                _outputStatNbMatchedFeatures,
-                _outputStatNbInlierFeatures);
+                _outputStatErrorMean[outputIndex],
+                _outputStatErrorMin[outputIndex],
+                _outputStatErrorMax[outputIndex],
+                _outputStatNbMatchedImages[outputIndex],
+                _outputStatNbDetectedFeatures[outputIndex],
+                _outputStatNbMatchedFeatures[outputIndex],
+                _outputStatNbInlierFeatures[outputIndex]);
 
         _localizationResultsAtTime[args.time] = localizationResult;
         intrinsics = localizationResult.getIntrinsics();

@@ -24,31 +24,31 @@
 
 
 //Input Parameters
-#define kParamGroupInput(I) "groupInput" + std::to_string(I)
+#define kParamGroupInput(I) "groupInput_" + std::to_string(I)
 
-#define kParamInputIsGrayscale(I) "inputIsGrayscale" + std::to_string(I)
-#define kParamInputLensCalibrationFile(I) "inputLensCalibrationFile" + std::to_string(I)
+#define kParamInputIsGrayscale(I) "inputIsGrayscale_" + std::to_string(I)
+#define kParamInputLensCalibrationFile(I) "inputLensCalibrationFile_" + std::to_string(I)
 
-#define kParamInputGroupLensCalibration(I) "groupInputLensCalibration" + std::to_string(I)
+#define kParamInputGroupLensCalibration(I) "groupInputLensCalibration_" + std::to_string(I)
 
-#define kParamInputSensorWidth(I) "inputSensorWidth" + std::to_string(I)
-#define kParamInputOpticalCenter(I) "inputOpticalCenter" + std::to_string(I)
-#define kParamInputFocalLengthMode(I) "inputFocalLengthMode" + std::to_string(I)
-#define kParamInputFocalLength(I) "inputFocalLength" + std::to_string(I)
-#define kParamInputFocalLengthVarying(I) "inputFocalLengthVarying" + std::to_string(I)
-#define kParamInputDistortion(I) "inputDistortion" + std::to_string(I)
-#define kParamInputDistortionMode(I) "inputDistortionMode" + std::to_string(I)
-#define kParamInputDistortionCoef1(I) "inputDistortionCoef1" + std::to_string(I)
-#define kParamInputDistortionCoef2(I) "inputDistortionCoef2" + std::to_string(I)
-#define kParamInputDistortionCoef3(I) "inputDistortionCoef3" + std::to_string(I)
-#define kParamInputDistortionCoef4(I) "inputDistortionCoef4" + std::to_string(I)
+#define kParamInputSensorWidth(I) "inputSensorWidth_" + std::to_string(I)
+#define kParamInputOpticalCenter(I) "inputOpticalCenter_" + std::to_string(I)
+#define kParamInputFocalLengthMode(I) "inputFocalLengthMode_" + std::to_string(I)
+#define kParamInputFocalLength(I) "inputFocalLength_" + std::to_string(I)
+#define kParamInputFocalLengthVarying(I) "inputFocalLengthVarying_" + std::to_string(I)
+#define kParamInputDistortion(I) "inputDistortion_" + std::to_string(I)
+#define kParamInputDistortionMode(I) "inputDistortionMode_" + std::to_string(I)
+#define kParamInputDistortionCoef1(I) "inputDistortionCoef1_" + std::to_string(I)
+#define kParamInputDistortionCoef2(I) "inputDistortionCoef2_" + std::to_string(I)
+#define kParamInputDistortionCoef3(I) "inputDistortionCoef3_" + std::to_string(I)
+#define kParamInputDistortionCoef4(I) "inputDistortionCoef4_" + std::to_string(I)
 
-#define kParamInputGroupRelativePose(I) "groupInputRelativePose" + std::to_string(I)
+#define kParamInputGroupRelativePose(I) "groupInputRelativePose_" + std::to_string(I)
 
-#define kParamInputRelativePoseRotateM1(I) "inputRelativePoseM1Rotate" + std::to_string(I)
-#define kParamInputRelativePoseRotateM2(I) "inputRelativePoseM2Rotate" + std::to_string(I)
-#define kParamInputRelativePoseRotateM3(I) "inputRelativePoseM3Rotate" + std::to_string(I)
-#define kParamInputRelativePoseCenter(I) "inputRelativePoseCenter" + std::to_string(I)
+#define kParamInputRelativePoseRotateM1(I) "inputRelativePoseRotateM1_" + std::to_string(I)
+#define kParamInputRelativePoseRotateM2(I) "inputRelativePoseRotateM2_" + std::to_string(I)
+#define kParamInputRelativePoseRotateM3(I) "inputRelativePoseRotateM3_" + std::to_string(I)
+#define kParamInputRelativePoseCenter(I) "inputRelativePoseCenter_" + std::to_string(I)
 
 
 //Advanced Parameters
@@ -80,33 +80,36 @@
 //Output Parameters
 #define kParamGroupOutput "groupOutput"
 
-#define kParamOutputTranslate "outputTranslate"
-#define kParamOutputRotate "outputRotate"
-#define kParamOutputScale "outputScale"
-#define kParamOutputOpticalCenter "outputOpticalCenter"
-#define kParamOutputFocalLength "outputFocalLength"
-#define kParamOutputNear "outputNear"
-#define kParamOutputFar "outputFar"
-#define kParamOutputDistortionCoef1 "outputDistortionCoef1"
-#define kParamOutputDistortionCoef2 "outputDistortionCoef2"
-#define kParamOutputDistortionCoef3 "outputDistortionCoef3"
-#define kParamOutputDistortionCoef4 "outputDistortionCoef4"
+#define kParamGroupOutputCamera(I) "groupOutputCamera_" + std::to_string(I)
+
+#define kParamOutputTranslate(I) "outputTranslate_" + std::to_string(I)
+#define kParamOutputRotate(I) "outputRotate_" + std::to_string(I)
+#define kParamOutputScale(I) "outputScale_" + std::to_string(I)
+#define kParamOutputOpticalCenter(I) "outputOpticalCenter_" + std::to_string(I)
+#define kParamOutputFocalLength(I) "outputFocalLength_" + std::to_string(I)
+#define kParamOutputNear(I) "outputNear_" + std::to_string(I)
+#define kParamOutputFar(I) "outputFar_" + std::to_string(I)
+#define kParamOutputDistortionCoef1(I) "outputDistortionCoef1_" + std::to_string(I)
+#define kParamOutputDistortionCoef2(I) "outputDistortionCoef2_" + std::to_string(I)
+#define kParamOutputDistortionCoef3(I) "outputDistortionCoef3_" + std::to_string(I)
+#define kParamOutputDistortionCoef4(I) "outputDistortionCoef4_" + std::to_string(I)
+#define kParamOutputCreateCamera(I) "outputCreateCamera_" + std::to_string(I)
+
+#define kParamOutputStatGroup(I) "groupOutputStat_" + std::to_string(I)
+
+#define kParamOutputStatErrorMean(I) "outputStatErrorMean_" + std::to_string(I)
+#define kParamOutputStatErrorMin(I) "outputStatErrorMin_" + std::to_string(I)
+#define kParamOutputStatErrorMax(I) "outputStatErrorMax_" + std::to_string(I)
+#define kParamOutputStatNbMatchedImages(I) "outputStatNbMatchedImages_" + std::to_string(I)
+#define kParamOutputStatNbDetectedFeatures(I) "outputStatNbDetectedFeatures_" + std::to_string(I)
+#define kParamOutputStatNbMatchedFeatures(I) "outputStatNbMatchedFeatures_" + std::to_string(I)
+#define kParamOutputStatNbInlierFeatures(I) "outputStatNbInlierFeatures_" + std::to_string(I)
+
+//Cache Parameters
 #define kParamOutputClear "outputClear"
 #define kParamOutputClearCurrentFrame "outputClearCurrentFrame"
-#define kParamOutputCreateCamera "outputCreateCamera"
 
-#define kParamOutputStatGroup "groupOutputStat"
-
-#define kParamOutputStatErrorMean "outputStatErrorMean"
-#define kParamOutputStatErrorMin "outputStatErrorMin"
-#define kParamOutputStatErrorMax "outputStatErrorMax"
-#define kParamOutputStatNbMatchedImages "outputStatNbMatchedImages"
-#define kParamOutputStatNbDetectedFeatures "outputStatNbDetectedFeatures"
-#define kParamOutputStatNbMatchedFeatures "outputStatNbMatchedFeatures"
-#define kParamOutputStatNbInlierFeatures "outputStatNbInlierFeatures"
-
-
-// Invalidation Parameters
+//Invalidation Parameters
 #define kParamForceInvalidation "forceInvalidation"
 #define kParamForceInvalidationAtTime "forceInvalidationAtTime"
 

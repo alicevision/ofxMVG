@@ -544,220 +544,236 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     groupOutput->setLabel("Output");
     groupOutput->setAsTab();
     
+    for(unsigned int input = 0; input < K_MAX_INPUTS; ++input)
     {
-      OFX::Double3DParamDescriptor *param = desc.defineDouble3DParam(kParamOutputTranslate);
-      param->setLabel("Translate");
-      param->setHint("Camera output translate");
-      param->setAnimates(true);
-      param->setEnabled(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-    }
-
-    {
-      OFX::Double3DParamDescriptor *param = desc.defineDouble3DParam(kParamOutputRotate);
-      param->setLabel("Rotate");
-      param->setHint("Camera output rotate");
-      param->setAnimates(true);
-      param->setEnabled(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-    }
-
-    {
-      OFX::Double3DParamDescriptor *param = desc.defineDouble3DParam(kParamOutputScale);
-      param->setLabel("Scale");
-      param->setHint("Camera output scale");
-      param->setAnimates(true);
-      param->setEnabled(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-    }
-    
-    {
-      OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamOutputOpticalCenter);
-      param->setLabel("Optical Center");
-      param->setHint("Camera output optical center");
-      param->setDisplayRange(-50, -50, 50, 50);
-      param->setAnimates(true);
-      param->setEnabled(false);
-      param->setUseHostOverlayHandle(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-    }
-    
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputFocalLength);
-      param->setLabel("Focal Length");
-      param->setHint("Camera output focal length");
-      param->setDisplayRange(0, 300);
-      param->setAnimates(true);
-      param->setEnabled(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-    }
-    
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputNear);
-      param->setLabel("Near");
-      param->setHint("Camera output near distance");
-      param->setDisplayRange(0, 300);
-      param->setAnimates(true);
-      param->setEnabled(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-    }
-    
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputFar);
-      param->setLabel("Far");
-      param->setHint("Camera output far distance");
-      param->setDisplayRange(0, 300);
-      param->setAnimates(true);
-      param->setEnabled(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-    }
-    
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef1);
-      param->setLabel("Lens Distortion Coef1");
-      param->setHint("Lens distortion coefficient 1");
-      param->setRange(-1, 1);
-      param->setDisplayRange(-1,1);
-      param->setEnabled(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-    }
-
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef2);
-      param->setLabel("Lens Distortion Coef2");
-      param->setHint("Lens distortion coefficient 2");
-      param->setRange(-1, 1);
-      param->setDisplayRange(-1,1);
-      param->setEnabled(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-    }
-
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef3);
-      param->setLabel("Lens Distortion Coef3");
-      param->setHint("Lens distortion coefficient 3");
-      param->setRange(-1, 1);
-      param->setDisplayRange(-1,1);
-      param->setEnabled(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-    }
-
-    {
-      OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef4);
-      param->setLabel("Lens Distortion Coef4");
-      param->setHint("Lens distortion coefficient 4");
-      param->setRange(-1, 1);
-      param->setDisplayRange(-1,1);
-      param->setEnabled(false);
-      param->setEvaluateOnChange(false);
-      param->setCanUndo(false);
-      param->setParent(*groupOutput);
-      param->setLayoutHint(OFX::eLayoutHintDivider);
-    }
-    
-    {
-      OFX::GroupParamDescriptor *groupError = desc.defineGroupParam(kParamOutputStatGroup);
-      groupError->setLabel("Error Statistics");
-      groupError->setParent(*groupOutput);
-      groupError->setOpen(false);
+      OFX::GroupParamDescriptor *groupOutputCamera = desc.defineGroupParam(kParamGroupOutputCamera(input));
+      groupOutputCamera->setLabel("Output " + kClip(input));
+      groupOutputCamera->setParent(*groupOutput);
+      groupOutputCamera->setAsTab();
+      
+      {
+        OFX::Double3DParamDescriptor *param = desc.defineDouble3DParam(kParamOutputTranslate(input));
+        param->setLabel("Translate");
+        param->setHint("Camera output translate");
+        param->setAnimates(true);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupOutputCamera);
+      }
 
       {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatErrorMean);
-        param->setLabel("Error Mean");
-        param->setHint("Error Mean");
+        OFX::Double3DParamDescriptor *param = desc.defineDouble3DParam(kParamOutputRotate(input));
+        param->setLabel("Rotate");
+        param->setHint("Camera output rotate");
+        param->setAnimates(true);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupOutputCamera);
+      }
+
+      {
+        OFX::Double3DParamDescriptor *param = desc.defineDouble3DParam(kParamOutputScale(input));
+        param->setLabel("Scale");
+        param->setHint("Camera output scale");
+        param->setAnimates(true);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupOutputCamera);
+      }
+
+      {
+        OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamOutputOpticalCenter(input));
+        param->setLabel("Optical Center");
+        param->setHint("Camera output optical center");
+        param->setDisplayRange(-50, -50, 50, 50);
+        param->setAnimates(true);
+        param->setEnabled(false);
+        param->setUseHostOverlayHandle(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupOutputCamera);
+      }
+
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputFocalLength(input));
+        param->setLabel("Focal Length");
+        param->setHint("Camera output focal length");
+        param->setDisplayRange(0, 300);
+        param->setAnimates(true);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupOutputCamera);
+      }
+
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputNear(input));
+        param->setLabel("Near");
+        param->setHint("Camera output near distance");
+        param->setDisplayRange(0, 300);
+        param->setAnimates(true);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupOutputCamera);
+      }
+
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputFar(input));
+        param->setLabel("Far");
+        param->setHint("Camera output far distance");
+        param->setDisplayRange(0, 300);
+        param->setAnimates(true);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupOutputCamera);
+      }
+
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef1(input));
+        param->setLabel("Lens Distortion Coef1");
+        param->setHint("Lens distortion coefficient 1");
+        param->setRange(-1, 1);
         param->setDisplayRange(-1,1);
         param->setEnabled(false);
         param->setEvaluateOnChange(false);
         param->setCanUndo(false);
-        param->setParent(*groupError);
+        param->setParent(*groupOutputCamera);
       }
-      
-      {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatErrorMin);
-        param->setLabel("Error Min");
-        param->setHint("Error Min");
-        param->setDisplayRange(-1,1);
-        param->setEnabled(false);
-        param->setEvaluateOnChange(false);
-        param->setCanUndo(false);
-        param->setParent(*groupError);
-      }
-      
-      {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatErrorMax);
-        param->setLabel("Error Max");
-        param->setHint("Error Max");
-        param->setDisplayRange(-1,1);
-        param->setEnabled(false);
-        param->setEvaluateOnChange(false);
-        param->setCanUndo(false);
-        param->setParent(*groupError);
-      }
-      
-      {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbMatchedImages);
-        param->setLabel("Nb Matched Images");
-        param->setHint("Number of images matched in the 3D reconstruction.");
-        param->setDisplayRange(0, 50);
-        param->setEnabled(false);
-        param->setEvaluateOnChange(false);
-        param->setCanUndo(false);
-        param->setParent(*groupError);
-      }
-      
-      {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbDetectedFeatures);
-        param->setLabel("Nb Detected Features");
-        param->setHint("Number of features detected in the image.");
-        param->setDisplayRange(0, 50000);
-        param->setEnabled(false);
-        param->setEvaluateOnChange(false);
-        param->setCanUndo(false);
-        param->setParent(*groupError);
-      }
-      
-      {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbMatchedFeatures);
-        param->setLabel("Nb Matched Features");
-        param->setHint("Number of features from the image that match with 3D points.");
-        param->setDisplayRange(0, 5000);
-        param->setEnabled(false);
-        param->setEvaluateOnChange(false);
-        param->setCanUndo(false);
-        param->setParent(*groupError);
-      }
-      
-      {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbInlierFeatures);
-        param->setLabel("Nb Inliers Features");
-        param->setHint("Number of features validated / used for the camera pose localization.");
-        param->setDisplayRange(0, 2000);
-        param->setEnabled(false);
-        param->setEvaluateOnChange(false);
-        param->setCanUndo(false);
-        param->setParent(*groupError);
 
-        param->setLayoutHint(OFX::eLayoutHintDivider); // Next section
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef2(input));
+        param->setLabel("Lens Distortion Coef2");
+        param->setHint("Lens distortion coefficient 2");
+        param->setRange(-1, 1);
+        param->setDisplayRange(-1,1);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupOutputCamera);
+      }
+
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef3(input));
+        param->setLabel("Lens Distortion Coef3");
+        param->setHint("Lens distortion coefficient 3");
+        param->setRange(-1, 1);
+        param->setDisplayRange(-1,1);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupOutputCamera);
+      }
+
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputDistortionCoef4(input));
+        param->setLabel("Lens Distortion Coef4");
+        param->setHint("Lens distortion coefficient 4");
+        param->setRange(-1, 1);
+        param->setDisplayRange(-1,1);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupOutputCamera);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+      }
+
+      {
+        OFX::GroupParamDescriptor *groupStats = desc.defineGroupParam(kParamOutputStatGroup(input));
+        groupStats->setLabel("Statistics");
+        groupStats->setParent(*groupOutputCamera);
+        groupStats->setOpen(false);
+
+        {
+          OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatErrorMean(input));
+          param->setLabel("Error Mean");
+          param->setHint("Error Mean");
+          param->setDisplayRange(-1,1);
+          param->setEnabled(false);
+          param->setEvaluateOnChange(false);
+          param->setCanUndo(false);
+          param->setParent(*groupStats);
+        }
+
+        {
+          OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatErrorMin(input));
+          param->setLabel("Error Min");
+          param->setHint("Error Min");
+          param->setDisplayRange(-1,1);
+          param->setEnabled(false);
+          param->setEvaluateOnChange(false);
+          param->setCanUndo(false);
+          param->setParent(*groupStats);
+        }
+
+        {
+          OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatErrorMax(input));
+          param->setLabel("Error Max");
+          param->setHint("Error Max");
+          param->setDisplayRange(-1,1);
+          param->setEnabled(false);
+          param->setEvaluateOnChange(false);
+          param->setCanUndo(false);
+          param->setParent(*groupStats);
+        }
+
+        {
+          OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbMatchedImages(input));
+          param->setLabel("Nb Matched Images");
+          param->setHint("Number of images matched in the 3D reconstruction.");
+          param->setDisplayRange(0, 50);
+          param->setEnabled(false);
+          param->setEvaluateOnChange(false);
+          param->setCanUndo(false);
+          param->setParent(*groupStats);
+        }
+
+        {
+          OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbDetectedFeatures(input));
+          param->setLabel("Nb Detected Features");
+          param->setHint("Number of features detected in the image.");
+          param->setDisplayRange(0, 50000);
+          param->setEnabled(false);
+          param->setEvaluateOnChange(false);
+          param->setCanUndo(false);
+          param->setParent(*groupStats);
+        }
+
+        {
+          OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbMatchedFeatures(input));
+          param->setLabel("Nb Matched Features");
+          param->setHint("Number of features from the image that match with 3D points.");
+          param->setDisplayRange(0, 5000);
+          param->setEnabled(false);
+          param->setEvaluateOnChange(false);
+          param->setCanUndo(false);
+          param->setParent(*groupStats);
+        }
+
+        {
+          OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbInlierFeatures(input));
+          param->setLabel("Nb Inliers Features");
+          param->setHint("Number of features validated / used for the camera pose localization.");
+          param->setDisplayRange(0, 2000);
+          param->setEnabled(false);
+          param->setEvaluateOnChange(false);
+          param->setCanUndo(false);
+          param->setParent(*groupStats);
+
+          param->setLayoutHint(OFX::eLayoutHintDivider); // Next section
+        }
+      }
+      
+      {
+        OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputCreateCamera(input));
+        param->setLabel("Create Camera");
+        param->setHint("Create a linked Nuke camera");
+        param->setEnabled(true);
+        param->setParent(*groupOutputCamera);
       }
     }
 
@@ -773,14 +789,6 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputClear);
       param->setLabel("Clear All");
       param->setHint("Clear all output values and cache");
-      param->setEnabled(true);
-      param->setParent(*groupOutput);
-    }
-
-    {
-      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputCreateCamera);
-      param->setLabel("Create Camera");
-      param->setHint("Create a linked Nuke camera");
       param->setEnabled(true);
       param->setParent(*groupOutput);
     }
