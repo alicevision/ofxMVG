@@ -1,15 +1,16 @@
 #pragma once
+
 #include "CameraLocalizerPluginDefinition.hpp"
 #include "Image.hpp"
 
-#include "openMVG/localization/ILocalizer.hpp"
-#include "openMVG/localization/VoctreeLocalizer.hpp"
+#include <openMVG/localization/ILocalizer.hpp>
+#include <openMVG/localization/VoctreeLocalizer.hpp>
 #if HAVE_CCTAG
 #include <openMVG/localization/CCTagLocalizer.hpp>
 #endif
-#include "openMVG/rig/Rig.hpp"
-#include "openMVG/image/image_io.hpp"
-#include "openMVG/dataio/FeedProvider.hpp"
+#include <openMVG/rig/Rig.hpp>
+#include <openMVG/image/image_io.hpp>
+#include <openMVG/dataio/FeedProvider.hpp>
 
 #include <memory>
 
@@ -23,13 +24,16 @@ struct LocalizerProcessData
   std::unique_ptr<openMVG::localization::ILocalizer> localizer;
   // rig::Rig rig;
   
-  
-  bool localize(openMVG::image::Image<unsigned char> &imageGray, 
+  void extractFeatures(
+      const openMVG::image::Image<unsigned char> &imageGray,
+      std::unique_ptr<openMVG::features::Regions>& outQueryRegions) const;
+
+  bool localize(std::unique_ptr<openMVG::features::Regions>& queryRegions,
+                const std::pair<std::size_t, std::size_t>& queryImageSize,
                 bool hasIntrinsics,  
                 openMVG::cameras::Pinhole_Intrinsic_Radial_K3 &queryIntrinsics,
                 openMVG::localization::LocalizationResult &localizationResult);
-  
-  
+
   bool localizeRig(const std::vector<openMVG::image::Image<unsigned char> > & vec_imageGray,
                     std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3 > &vec_queryIntrinsics,
                     const std::vector<openMVG::geometry::Pose3 > &vec_subPoses,
@@ -102,12 +106,17 @@ void setIntrinsicsToParamsAtTime(
  * @param outputErrorMin
  * @param outputErrorMax
  */
-void setErrorToParamsAtTime(
+void setStatToParamsAtTime(
     const openMVG::localization::LocalizationResult &localizationResult,
+    const std::vector<openMVG::features::SIOPointFeature>& features,
     const double time,
-    OFX::DoubleParam *outputErrorMean,
-    OFX::DoubleParam *outputErrorMin,
-    OFX::DoubleParam *outputErrorMax);
+    OFX::DoubleParam *outputStatErrorMean,
+    OFX::DoubleParam *outputStatErrorMin,
+    OFX::DoubleParam *outputStatErrorMax,
+    OFX::DoubleParam *outputStatNbMatchedImages,
+    OFX::DoubleParam *outputStatNbDetectedFeatures,
+    OFX::DoubleParam *outputStatNbMatchedFeatures,
+    OFX::DoubleParam *outputStatNbInlierFeatures);
 
 /**
  * @brief convert a 32 bits float image to a gray (unsigned char) 8 bits image

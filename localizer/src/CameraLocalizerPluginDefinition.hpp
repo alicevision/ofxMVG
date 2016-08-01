@@ -54,6 +54,7 @@
 //Advanced Parameters
 #define kParamGroupAdvanced "groupAdvanced"
 
+#define kParamOverlay "overlay"
 #define kParamAdvancedAlgorithm "advancedAlgorithm"
 #define kParamAdvancedReprojectionError "advancedReprojectionError"
 #define kParamAdvancedNbImageMatch "advancedNbImageMatch"
@@ -94,11 +95,15 @@
 #define kParamOutputClearCurrentFrame "outputClearCurrentFrame"
 #define kParamOutputCreateCamera "outputCreateCamera"
 
-#define kParamOutputGroupError "groupOutputError"
+#define kParamOutputStatGroup "groupOutputStat"
 
-#define kParamOutputErrorMean "outputErrorMean"
-#define kParamOutputErrorMin "outputErrorMin"
-#define kParamOutputErrorMax "outputErrorMax"
+#define kParamOutputStatErrorMean "outputStatErrorMean"
+#define kParamOutputStatErrorMin "outputStatErrorMin"
+#define kParamOutputStatErrorMax "outputStatErrorMax"
+#define kParamOutputStatNbMatchedImages "outputStatNbMatchedImages"
+#define kParamOutputStatNbDetectedFeatures "outputStatNbDetectedFeatures"
+#define kParamOutputStatNbMatchedFeatures "outputStatNbMatchedFeatures"
+#define kParamOutputStatNbInlierFeatures "outputStatNbInlierFeatures"
 
 
 // Invalidation Parameters

@@ -369,6 +369,15 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     groupAdvanced->setAsTab();
     
     {
+      OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOverlay);
+      param->setLabel("Overlay");
+      param->setHint("Enable overlay of matched points and resection inliers/outliers.");
+      param->setParent(*groupAdvanced);
+      param->setDefault(false);
+      param->setEvaluateOnChange(false);
+    }
+
+    {
       OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAdvancedAlgorithm);
       param->setLabel("Algorithm");
       param->setHint("Camera Localizer Algorithm");
@@ -667,13 +676,13 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     }
     
     {
-      OFX::GroupParamDescriptor *groupError = desc.defineGroupParam(kParamOutputGroupError);
+      OFX::GroupParamDescriptor *groupError = desc.defineGroupParam(kParamOutputStatGroup);
       groupError->setLabel("Error Statistics");
       groupError->setParent(*groupOutput);
       groupError->setOpen(false);
 
       {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputErrorMean);
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatErrorMean);
         param->setLabel("Error Mean");
         param->setHint("Error Mean");
         param->setDisplayRange(-1,1);
@@ -684,7 +693,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       }
       
       {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputErrorMin);
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatErrorMin);
         param->setLabel("Error Min");
         param->setHint("Error Min");
         param->setDisplayRange(-1,1);
@@ -695,7 +704,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       }
       
       {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputErrorMax);
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatErrorMax);
         param->setLabel("Error Max");
         param->setHint("Error Max");
         param->setDisplayRange(-1,1);
@@ -703,7 +712,52 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setEvaluateOnChange(false);
         param->setCanUndo(false);
         param->setParent(*groupError);
-        param->setLayoutHint(OFX::eLayoutHintDivider);
+      }
+      
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbMatchedImages);
+        param->setLabel("Nb Matched Images");
+        param->setHint("Number of images matched in the 3D reconstruction.");
+        param->setDisplayRange(0, 50);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupError);
+      }
+      
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbDetectedFeatures);
+        param->setLabel("Nb Detected Features");
+        param->setHint("Number of features detected in the image.");
+        param->setDisplayRange(0, 50000);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupError);
+      }
+      
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbMatchedFeatures);
+        param->setLabel("Nb Matched Features");
+        param->setHint("Number of features from the image that match with 3D points.");
+        param->setDisplayRange(0, 5000);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupError);
+      }
+      
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputStatNbInlierFeatures);
+        param->setLabel("Nb Inliers Features");
+        param->setHint("Number of features validated / used for the camera pose localization.");
+        param->setDisplayRange(0, 2000);
+        param->setEnabled(false);
+        param->setEvaluateOnChange(false);
+        param->setCanUndo(false);
+        param->setParent(*groupError);
+
+        param->setLayoutHint(OFX::eLayoutHintDivider); // Next section
       }
     }
 

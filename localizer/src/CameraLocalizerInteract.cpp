@@ -17,87 +17,120 @@ Absolute(T a) { return (a < 0) ? -a : a;}
 
 
 bool CameraLocalizerInteract::draw(const OFX::DrawArgs &args)
-{  
-  if(!_plugin->hasCachedLocalizationResults(args.time))
-  {
-    std::cout << "CameraLocalizerInteract::draw: " << long(_plugin) << std::endl;
-    std::cout << "CameraLocalizerInteract::draw: nothing in cache at time: " << args.time << std::endl;
+{
+  if(!_plugin->displayOverlay())
     return false;
-  }
 
-  const openMVG::localization::LocalizationResult& localizationResult = _plugin->getCachedLocalizationResults(args.time);
+  openMVG::cameras::Pinhole_Intrinsic_Radial_K3 intrinsics;
+  
 
-  openMVG::Mat pt2dDetected = localizationResult.getUndistortedPt2D();
-  openMVG::Mat pt2dProjected;
-  pt2dProjected.resize(2, pt2dDetected.size());
-  const openMVG::Mat& pt3d = localizationResult.getPt3D();
-//  openMVG::Mat2X residuals = localizationResult.getIntrinsics().residuals(localizationResult.getPose(), pt3d, pt2d);
-//  openMVG::Mat2X residuals = localizationResult.computeResiduals();
-//  std::cout << "CameraLocalizerInteract::draw: nb points: " << pt2d.cols() << std::endl;
-
-  for(std::size_t i = 0; i < pt2dDetected.cols(); ++i)
+  if(_plugin->hasCachedLocalizationResults(args.time))
   {
-    // Vertical flip: OpenFX is bottomUp and openMVG is topDown
-    pt2dDetected(1, i) = localizationResult.getIntrinsics().h() - pt2dDetected(1, i);
-
-    // Project 3D point in 2D without distortion
-    openMVG::Vec2 projected = localizationResult.getIntrinsics().project(localizationResult.getPose(), pt3d.col(i), false);
-    pt2dProjected(0, i) = projected(0);
-    // Vertical flip: OpenFX is bottomUp and openMVG is topDown
-    pt2dProjected(1, i) = localizationResult.getIntrinsics().h() - projected(1);
+    const openMVG::localization::LocalizationResult& localizationResult = _plugin->getCachedLocalizationResults(args.time);
+    intrinsics = localizationResult.getIntrinsics();
   }
-
-  glPointSize(3);
-  glLineWidth(1);
-
-  glColor3f(1.f, 0.5f, 0.5f);
-
-  glBegin(GL_POINTS);
-  for(std::size_t i = 0; i < pt2dDetected.cols(); ++i)
+  else
   {
-    openMVG::Vec2 point = pt2dDetected.col(i);
-    glVertex2f(point(0), point(1));
+    // init intrinsics from input params
   }
-  glEnd();
-  glBegin(GL_LINES);
-  for(std::size_t i = 0; i < pt2dDetected.cols(); ++i)
+
+  // Display all detected features
+  if(_plugin->hasCachedFeatures(args.time))
   {
-    openMVG::Vec2 pointDetected = pt2dDetected.col(i);
-    openMVG::Vec2 pointProjected = pt2dProjected.col(i);
-    glVertex2f(pointDetected(0), pointDetected(1));
-    glVertex2f(pointProjected(0), pointProjected(1));
+    // Detected points
+    glColor3f(1.f, 0.5f, 0.5f);
+    glPointSize(2);
+    glBegin(GL_POINTS);
+    const std::vector<openMVG::features::SIOPointFeature>& detectedFeatures = _plugin->getCachedFeatures(args.time);
+    for(std::size_t i = 0; i < detectedFeatures.size(); ++i)
+    {
+      openMVG::Vec2 origPoint = detectedFeatures[i].coords().cast<double>();
+      openMVG::Vec2 point = intrinsics.get_ud_pixel(origPoint);
+      // Vertical flip
+      glVertex2f(point(0), intrinsics.h() - point(1));
+    }
+    glEnd();
   }
-  glEnd();
 
-  glColor3f(.5f, 1.f, .5f);
-
-  glBegin(GL_POINTS);
-  for(std::size_t i: localizationResult.getInliers())
+  // Display localization results
+  if(_plugin->hasCachedLocalizationResults(args.time))
   {
-    openMVG::Vec2 point = pt2dDetected.col(i);
-    glVertex2f(point(0), point(1));
-  }
-  glEnd();
-  glBegin(GL_LINES);
-  for(std::size_t i: localizationResult.getInliers())
-  {
-    openMVG::Vec2 pointDetected = pt2dDetected.col(i);
-    openMVG::Vec2 pointProjected = pt2dProjected.col(i);
-    glVertex2f(pointDetected(0), pointDetected(1));
-    glVertex2f(pointProjected(0), pointProjected(1));
-  }
-  glEnd();
+    const openMVG::localization::LocalizationResult& localizationResult = _plugin->getCachedLocalizationResults(args.time);
 
-  glColor3f(0.f, .5f, 0.f);
-  for(std::size_t i: localizationResult.getInliers())
-  {
-    openMVG::Vec2 point = pt2dProjected.col(i);
-    openMVG::IndexT id = localizationResult.getIndMatch3D2D()[i].first;
-    std::string idStr = std::to_string(id);
+    openMVG::Mat pt2dDetected = localizationResult.retrieveUndistortedPt2D();
+    openMVG::Mat pt2dProjected;
+    pt2dProjected.resize(2, pt2dDetected.size());
+    const openMVG::Mat& pt3d = localizationResult.getPt3D();
+  //  openMVG::Mat2X residuals = intrinsics.residuals(localizationResult.getPose(), pt3d, pt2d);
+  //  openMVG::Mat2X residuals = localizationResult.computeResiduals();
+  //  std::cout << "CameraLocalizerInteract::draw: nb points: " << pt2d.cols() << std::endl;
 
-    stb_print_string(point(0) + 2, point(1) + 2, idStr);
+    for(std::size_t i = 0; i < pt2dDetected.cols(); ++i)
+    {
+      // Vertical flip: OpenFX is bottomUp and openMVG is topDown
+      pt2dDetected(1, i) = intrinsics.h() - pt2dDetected(1, i);
+
+      // Project 3D point in 2D without distortion
+      openMVG::Vec2 projected = intrinsics.project(localizationResult.getPose(), pt3d.col(i), false);
+      pt2dProjected(0, i) = projected(0);
+      // Vertical flip: OpenFX is bottomUp and openMVG is topDown
+      pt2dProjected(1, i) = intrinsics.h() - projected(1);
+    }
+
+    // Matched points
+    glColor3f(1.f, 0.5f, 0.5f);
+    glPointSize(4);
+    glBegin(GL_POINTS);
+    for(std::size_t i = 0; i < pt2dDetected.cols(); ++i)
+    {
+      openMVG::Vec2 point = pt2dDetected.col(i);
+      glVertex2f(point(0), point(1));
+    }
+    glEnd();
+    glLineWidth(1);
+    glBegin(GL_LINES);
+    for(std::size_t i = 0; i < pt2dDetected.cols(); ++i)
+    {
+      openMVG::Vec2 pointDetected = pt2dDetected.col(i);
+      openMVG::Vec2 pointProjected = pt2dProjected.col(i);
+      glVertex2f(pointDetected(0), pointDetected(1));
+      glVertex2f(pointProjected(0), pointProjected(1));
+    }
+    glEnd();
+
+    // Resectioning points inliers
+    glColor3f(.5f, 1.f, .5f);
+
+    glPointSize(4);
+    glBegin(GL_POINTS);
+    for(std::size_t i: localizationResult.getInliers())
+    {
+      openMVG::Vec2 point = pt2dDetected.col(i);
+      glVertex2f(point(0), point(1));
+    }
+    glEnd();
+    glLineWidth(1);
+    glBegin(GL_LINES);
+    for(std::size_t i: localizationResult.getInliers())
+    {
+      openMVG::Vec2 pointDetected = pt2dDetected.col(i);
+      openMVG::Vec2 pointProjected = pt2dProjected.col(i);
+      glVertex2f(pointDetected(0), pointDetected(1));
+      glVertex2f(pointProjected(0), pointProjected(1));
+    }
+    glEnd();
+
+    glColor3f(0.f, .5f, 0.f);
+    for(std::size_t i: localizationResult.getInliers())
+    {
+      openMVG::Vec2 point = pt2dProjected.col(i);
+      openMVG::IndexT id = localizationResult.getIndMatch3D2D()[i].first;
+      std::string idStr = std::to_string(id);
+
+      stb_print_string(point(0) + 2, point(1) + 2, idStr);
+    }
+
   }
-
   return true;
 }
 

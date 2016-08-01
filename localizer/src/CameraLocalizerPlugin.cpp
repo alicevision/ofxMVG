@@ -253,10 +253,27 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
     }
     else
     {
-      localized = _processData.localize(vecImageGray.front(),
-                                            vecHasIntrinsics.front(),
-                                            vecQueryIntrinsics.front(),
-                                            localizationResult);
+      const openMVG::image::Image<unsigned char>& imageGray = vecImageGray.front();
+      const std::pair<std::size_t, std::size_t> queryImageSize(std::make_pair(imageGray.Width(), imageGray.Height()));
+      std::unique_ptr<openMVG::features::Regions> queryRegions;
+
+      if(abort())
+        return;
+
+      _processData.extractFeatures(imageGray, queryRegions);
+      _extractedFeaturesAtTime[args.time] = dynamic_cast<const openMVG::features::SIFT_Regions*>(queryRegions.get())->Features();
+      // We can start to display the 2D points
+      this->redrawOverlays();
+
+      if(abort())
+        return;
+
+      localized = _processData.localize(queryRegions,
+                                        queryImageSize,
+                                        vecHasIntrinsics.front(),
+                                        vecQueryIntrinsics.front(),
+                                        localizationResult);
+
       if(localized)
       {
         setPoseToParamsAtTime(
@@ -273,12 +290,17 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
                 _cameraOutputFocalLength,
                 _cameraOutputOpticalCenter);
 
-        setErrorToParamsAtTime(
+        setStatToParamsAtTime(
                 localizationResult,
+                _extractedFeaturesAtTime.at(args.time),
                 args.time,
-                _outputErrorMean,
-                _outputErrorMin,
-                _outputErrorMax);
+                _outputStatErrorMean,
+                _outputStatErrorMin,
+                _outputStatErrorMax,
+                _outputStatNbMatchedImages,
+                _outputStatNbDetectedFeatures,
+                _outputStatNbMatchedFeatures,
+                _outputStatNbInlierFeatures);
 
         _localizationResultsAtTime[args.time] = localizationResult;
         intrinsics = localizationResult.getIntrinsics();
@@ -287,13 +309,7 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
 
     if(!localized)
     {
-      _localizationResultsAtTime.erase(args.time);
-
-      _cameraOutputTranslate->deleteKeyAtTime(args.time);
-      _cameraOutputRotate->deleteKeyAtTime(args.time);
-      _cameraOutputScale->deleteKeyAtTime(args.time);
-      _cameraOutputFocalLength->deleteKeyAtTime(args.time);
-      _cameraOutputOpticalCenter->deleteKeyAtTime(args.time);
+      clearOutputParamValuesAtTime(args.time);
     }
   }
 
@@ -445,11 +461,7 @@ void CameraLocalizerPlugin::changedParam(const OFX::InstanceChangedArgs &args, c
   //Clear Current Frame
   if(paramName == kParamOutputClearCurrentFrame)
   {
-    _cameraOutputTranslate->deleteKeyAtTime(args.time);
-    _cameraOutputRotate->deleteKeyAtTime(args.time);
-    _cameraOutputScale->deleteKeyAtTime(args.time);
-    _cameraOutputFocalLength->deleteKeyAtTime(args.time);
-    _cameraOutputOpticalCenter->deleteKeyAtTime(args.time);
+    clearOutputParamValuesAtTime(args.time);
     
     invalidRenderAtTime(args.time);
     return;
@@ -458,11 +470,7 @@ void CameraLocalizerPlugin::changedParam(const OFX::InstanceChangedArgs &args, c
   //Clear All
   if(paramName == kParamOutputClear)
   {
-    _cameraOutputTranslate->deleteAllKeys();
-    _cameraOutputRotate->deleteAllKeys();
-    _cameraOutputScale->deleteAllKeys();
-    _cameraOutputFocalLength->deleteAllKeys();
-    _cameraOutputOpticalCenter->deleteAllKeys();
+    clearOutputParamValues();
     
     invalidRender();
     return;

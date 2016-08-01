@@ -243,7 +243,7 @@ inline int stb_easy_font_height(char *text)
 //
 inline void stb_print_string(float x, float y, const std::string& text)
 {
-  std::vector<char> buffer(text.size() * 500);
+  std::vector<char> buffer(text.size() * 1000);
   int num_quads = stb_easy_font_print(x, y, text.c_str(), NULL, &buffer[0], buffer.size());
 
   glEnableClientState(GL_VERTEX_ARRAY);

@@ -53,6 +53,7 @@ private:
   OFX::StringParam *_rigCalibrationFile = fetchStringParam(kParamRigCalibrationFile);
   
   //Advanced Parameters
+  OFX::BooleanParam *_overlay = fetchBooleanParam(kParamOverlay);
   OFX::ChoiceParam *_algorithm = fetchChoiceParam(kParamAdvancedAlgorithm);
   OFX::DoubleParam *_reprojectionError = fetchDoubleParam(kParamAdvancedReprojectionError);
   OFX::IntParam *_nbImageMatch = fetchIntParam(kParamAdvancedNbImageMatch);
@@ -86,9 +87,14 @@ private:
   OFX::DoubleParam *_cameraOutputLensDistortionCoef3 = fetchDoubleParam(kParamOutputDistortionCoef3);
   OFX::DoubleParam *_cameraOutputLensDistortionCoef4 = fetchDoubleParam(kParamOutputDistortionCoef4);
   
-  OFX::DoubleParam *_outputErrorMean = fetchDoubleParam(kParamOutputErrorMean);
-  OFX::DoubleParam *_outputErrorMin = fetchDoubleParam(kParamOutputErrorMin);
-  OFX::DoubleParam *_outputErrorMax = fetchDoubleParam(kParamOutputErrorMax);
+  OFX::DoubleParam *_outputStatErrorMean = fetchDoubleParam(kParamOutputStatErrorMean);
+  OFX::DoubleParam *_outputStatErrorMin = fetchDoubleParam(kParamOutputStatErrorMin);
+  OFX::DoubleParam *_outputStatErrorMax = fetchDoubleParam(kParamOutputStatErrorMax);
+  OFX::DoubleParam *_outputStatNbMatchedImages = fetchDoubleParam(kParamOutputStatNbMatchedImages);
+  OFX::DoubleParam *_outputStatNbDetectedFeatures = fetchDoubleParam(kParamOutputStatNbDetectedFeatures);
+  OFX::DoubleParam *_outputStatNbMatchedFeatures = fetchDoubleParam(kParamOutputStatNbMatchedFeatures);
+  OFX::DoubleParam *_outputStatNbInlierFeatures = fetchDoubleParam(kParamOutputStatNbInlierFeatures);
+  
   OFX::PushButtonParam *_outputClear = fetchPushButtonParam(kParamOutputClear);
   
   // Invalidation Parameters
@@ -103,8 +109,24 @@ private:
   //Connected clip index vector
   std::vector<unsigned int> _connectedClipIdx;
 
+  std::vector<OFX::ValueParam*> _outputParams = {
+      _cameraOutputTranslate,
+      _cameraOutputRotate,
+      _cameraOutputScale,
+      _cameraOutputFocalLength,
+      _cameraOutputOpticalCenter,
+      _outputStatErrorMean,
+      _outputStatErrorMin,
+      _outputStatErrorMax,
+      _outputStatNbMatchedImages,
+      _outputStatNbDetectedFeatures,
+      _outputStatNbMatchedFeatures,
+      _outputStatNbInlierFeatures
+    };
+
   // cache
   std::map<OfxTime, openMVG::localization::LocalizationResult> _localizationResultsAtTime;
+  std::map<OfxTime, std::vector<openMVG::features::SIOPointFeature> > _extractedFeaturesAtTime;
 
 public:
   
@@ -220,17 +242,22 @@ public:
    */
   bool getInputInGrayScale(double time, unsigned int inputClipIdx, openMVG::image::Image<unsigned char> &outputImage);
   
-  std::size_t getNbConnectedInput()
+  bool displayOverlay() const
+  {
+    return _overlay->getValue();
+  }
+  
+  std::size_t getNbConnectedInput() const
   {
     return _connectedClipIdx.size();
   }
   
-  bool hasInput()
+  bool hasInput() const
   {
     return (_connectedClipIdx.size() > 0);
   }
     
-  bool isRigInInput()
+  bool isRigInInput() const
   {
     return (_connectedClipIdx.size() > 1);
   }
@@ -244,6 +271,24 @@ public:
   {
     _forceInvalidationAtTime->setValue(1 + _forceInvalidationAtTime->getValue());
   }
+  
+  void clearOutputParamValuesAtTime(OfxTime time)
+  {
+    _localizationResultsAtTime.erase(time);
+    _extractedFeaturesAtTime.erase(time);
+    
+    for(OFX::ValueParam* outputParam: _outputParams)
+      outputParam->deleteKeyAtTime(time);
+  }
+  
+  void clearOutputParamValues()
+  {
+    _localizationResultsAtTime.clear();
+    _extractedFeaturesAtTime.clear();
+
+    for(OFX::ValueParam* outputParam: _outputParams)
+      outputParam->deleteAllKeys();
+  }
 
   bool hasCachedLocalizationResults(OfxTime time) const
   {
@@ -253,6 +298,16 @@ public:
   const openMVG::localization::LocalizationResult& getCachedLocalizationResults(OfxTime time) const
   {
     return _localizationResultsAtTime.at(time);
+  }
+
+  bool hasCachedFeatures(OfxTime time) const
+  {
+    return _extractedFeaturesAtTime.find(time) != _extractedFeaturesAtTime.end();
+  }
+
+  const std::vector<openMVG::features::SIOPointFeature>& getCachedFeatures(OfxTime time) const
+  {
+    return _extractedFeaturesAtTime.at(time);
   }
 
 };
