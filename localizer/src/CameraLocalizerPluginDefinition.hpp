@@ -56,6 +56,8 @@
 
 #define kParamOverlay "overlay"
 #define kParamAdvancedAlgorithm "advancedAlgorithm"
+#define kParamAdvancedEstimatorMatching "advancedEstimatorMatching"
+#define kParamAdvancedEstimatorResection "advancedEstimatorResection"
 #define kParamAdvancedReprojectionError "advancedReprojectionError"
 #define kParamAdvancedNbImageMatch "advancedNbImageMatch"
 #define kParamAdvancedMaxResults "advancedMaxResults"
@@ -235,6 +237,30 @@ static const std::vector< std::pair<std::string, std::string> > kStringParamAlgo
   {"Best Result", ""},
   {"All Results", ""},
   {"Cluster", ""}
+};
+
+//kParamAdvancedEstimatorMatching options
+enum EParamEstimatorMatching
+{
+    eParamEstimatorMatchingACRansac = 0,
+    eParamEstimatorMatchingLORansac
+};
+
+static const std::vector< std::pair<std::string, std::string> > kStringParamEstimatorMatching = {
+  {"ACRansac", ""},
+  {"LORansac", ""}
+};
+
+//kParamAdvancedEstimatorResection options
+enum EParamEstimatorResection
+{
+    eParamEstimatorResectionACRansac = 0,
+    eParamEstimatorResectionLORansac
+};
+
+static const std::vector< std::pair<std::string, std::string> > kStringParamEstimatorResection = {
+  {"ACRansac", ""},
+  {"LORansac", ""}
 };
 
 //kParamTrackingRangeMode options

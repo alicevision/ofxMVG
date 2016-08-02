@@ -80,6 +80,26 @@ openMVG::localization::VoctreeLocalizer::Algorithm LocalizerProcessData::getAlgo
   }
 }
 
+openMVG::robust::EROBUST_ESTIMATOR LocalizerProcessData::getMatchingEstimator(EParamEstimatorMatching estimator)
+{
+  switch(estimator)
+  {
+    case eParamEstimatorMatchingACRansac : return openMVG::robust::ROBUST_ESTIMATOR_ACRANSAC; break;
+    case eParamEstimatorMatchingLORansac : return openMVG::robust::ROBUST_ESTIMATOR_LORANSAC; break;
+    default : throw std::invalid_argument("Unrecognized Estimator : " + std::to_string(estimator));
+  }
+}
+  
+openMVG::robust::EROBUST_ESTIMATOR LocalizerProcessData::getResectionEstimator(EParamEstimatorResection estimator)
+{
+  switch(estimator)
+  {
+    case eParamEstimatorResectionACRansac : return openMVG::robust::ROBUST_ESTIMATOR_ACRANSAC; break;
+    case eParamEstimatorResectionLORansac : return openMVG::robust::ROBUST_ESTIMATOR_LORANSAC; break;
+    default : throw std::invalid_argument("Unrecognized Estimator : " + std::to_string(estimator));
+  }
+}
+  
 EParamLensDistortionMode LocalizerProcessData::getLensDistortionModelFromEnum(openMVG::cameras::EINTRINSIC model)
 {
   switch(model)

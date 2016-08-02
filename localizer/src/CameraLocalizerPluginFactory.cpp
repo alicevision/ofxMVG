@@ -385,6 +385,24 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->appendOptions(kStringParamAlgorithm);
       param->setDefault(eParamAlgorithmAllResults);
     }
+    
+    {
+      OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAdvancedEstimatorMatching);
+      param->setLabel("Matching Estimator");
+      param->setHint("Matching Estimator"); //TODO FACA
+      param->setParent(*groupAdvanced);
+      param->appendOptions(kStringParamEstimatorMatching);
+      param->setDefault(eParamEstimatorMatchingACRansac);
+    }
+    
+    {
+      OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamAdvancedEstimatorResection);
+      param->setLabel("Resection Estimator");
+      param->setHint("Resection Estimator"); //TODO FACA
+      param->setParent(*groupAdvanced);
+      param->appendOptions(kStringParamEstimatorResection);
+      param->setDefault(eParamEstimatorResectionACRansac);
+    }
 
     {
       OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAdvancedReprojectionError);

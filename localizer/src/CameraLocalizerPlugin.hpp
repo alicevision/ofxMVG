@@ -55,6 +55,8 @@ private:
   //Advanced Parameters
   OFX::BooleanParam *_overlay = fetchBooleanParam(kParamOverlay);
   OFX::ChoiceParam *_algorithm = fetchChoiceParam(kParamAdvancedAlgorithm);
+  OFX::ChoiceParam *_estimatorMatching = fetchChoiceParam(kParamAdvancedEstimatorMatching);
+  OFX::ChoiceParam *_estimatorResection = fetchChoiceParam(kParamAdvancedEstimatorResection);
   OFX::DoubleParam *_reprojectionError = fetchDoubleParam(kParamAdvancedReprojectionError);
   OFX::IntParam *_nbImageMatch = fetchIntParam(kParamAdvancedNbImageMatch);
   OFX::IntParam *_maxResults = fetchIntParam(kParamAdvancedMaxResults);

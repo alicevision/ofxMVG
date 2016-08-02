@@ -147,6 +147,8 @@ void CameraLocalizerPlugin::parametersSetup()
   assert(_processData.param);
   
   //Set other common parameters
+  _processData.param->_matchingEstimator = LocalizerProcessData::getMatchingEstimator(static_cast<EParamEstimatorMatching>(_estimatorMatching->getValue()));
+  _processData.param->_resectionEstimator = LocalizerProcessData::getResectionEstimator(static_cast<EParamEstimatorResection>(_estimatorResection->getValue()));
   _processData.param->_featurePreset = LocalizerProcessData::getDescriberPreset(static_cast<EParamFeaturesPreset>(_featurePreset->getValue()));
   _processData.param->_refineIntrinsics = false; //TODO: globalBundle
   _processData.param->_visualDebug = _debugFolder->getValue();
@@ -210,6 +212,9 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
     }
   }
 
+  try
+  {
+  
   // Don't launch the tracker if we already have a keyFrame at current time.
   // We only need to provide the output image to nuke.
   if(!_alwaysComputeFrame->getValue() &&
@@ -344,6 +349,11 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
     {
       clearOutputParamValuesAtTime(args.time);
     }
+  }
+  
+  } catch(std::exception& e)
+  {
+    this->sendMessage(OFX::Message::eMessageError, "cameralocalization.render", e.what());
   }
 
   std::cout << "render : fetch output "  << std::endl;

@@ -54,6 +54,20 @@ struct LocalizerProcessData
   static openMVG::localization::VoctreeLocalizer::Algorithm getAlgorithm(EParamAlgorithm algorithm);
   
   /**
+   * @brief get openMVG robust estimator enum from Plugin matching display choice enum 
+   * @param estimator
+   * @return 
+   */
+  static openMVG::robust::EROBUST_ESTIMATOR getMatchingEstimator(EParamEstimatorMatching estimator);
+  
+  /**
+   *  @brief get openMVG robust estimator enum from Plugin resection display choice enum  
+   * @param estimator
+   * @return 
+   */
+  static openMVG::robust::EROBUST_ESTIMATOR getResectionEstimator(EParamEstimatorResection estimator);
+  
+  /**
    * 
    * @param model
    * @return 
