@@ -5,17 +5,6 @@
 
 #include <array>
 
-/**
- * OFX::Plugin::getPluginIDs
- * @param ids
- */
-void OFX::Plugin::getPluginIDs(OFX::PluginFactoryArray &ids)
-{
-  static openMVG_ofx::Localizer::CameraLocalizerPluginFactory p("openmvg.cameralocalizer", 1, 0);
-  ids.push_back(&p);
-}
-
-
 namespace openMVG_ofx {
 namespace Localizer { 
 

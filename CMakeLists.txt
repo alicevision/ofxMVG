@@ -42,6 +42,6 @@ find_package(Boost)
 # Add openfx subdirectory
 add_subdirectory("${PROJECT_SOURCE_DIR}/openfx")
 
-# Add Localizer plugin
-add_subdirectory("${PROJECT_SOURCE_DIR}/localizer")
+# Add plugin source 
+add_subdirectory("${PROJECT_SOURCE_DIR}/src")
 

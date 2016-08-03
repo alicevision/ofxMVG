@@ -10,6 +10,13 @@ The plugin supports multiple clips in input to localize a RIG of cameras (multip
 
 [CameraLocalizer on ShuttleOFX.](http://shuttleofx.org/plugin/openmvg.cameralocalizer)
 
+## LensCalibration
+
+LensCalibration estimates the best distortion parameters according to the couple camera/optics of a dataset.
+The plugin supports video file & folder containing images or image sequence.
+
+[LensCalibration on ShuttleOFX.](http://shuttleofx.org/plugin/openmvg.lenscalibration)
+
 ## Compilation
 
 ```

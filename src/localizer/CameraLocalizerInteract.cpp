@@ -2,7 +2,7 @@
 
 #include "CameraLocalizerPlugin.hpp"
 
-#include "stb_easy_font.h"
+#include "../common/stb_easy_font.h"
 
 namespace openMVG_ofx {
 namespace Localizer {

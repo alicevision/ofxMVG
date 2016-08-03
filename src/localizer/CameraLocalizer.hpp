@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CameraLocalizerPluginDefinition.hpp"
-#include "Image.hpp"
+#include "../common/Image.hpp"
 
 #include <openMVG/localization/ILocalizer.hpp>
 #include <openMVG/localization/VoctreeLocalizer.hpp>
@@ -137,17 +137,18 @@ void setStatToParamsAtTime(
  * @param inputImage
  * @param outputImage
  */
-void convertRGB32ToGRAY8(const Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage);
+
+void convertRGB32ToGRAY8(const Common::Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage);
 
 
-void convertGGG32ToGRAY8(const Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage);
+void convertGGG32ToGRAY8(const Common::Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage);
 
 /**
  * @brief convert a gray (unsigned char) 8 bits image to a 32 bits float image
  * @param inputImage
  * @param outputImage
  */
-void convertGRAY8ToRGB32(openMVG::image::Image<unsigned char> &inputImage, const Image<float>& outputImage);
+void convertGRAY8ToRGB32(openMVG::image::Image<unsigned char> &inputImage, const Common::Image<float>& outputImage);
 
 
 } //namespace Localizer

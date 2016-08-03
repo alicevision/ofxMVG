@@ -1,5 +1,5 @@
 #include "CameraLocalizerPlugin.hpp"
-#include "Image.hpp"
+#include "../common/Image.hpp"
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -365,7 +365,7 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
     return;
   }
 
-  Image<float> outputImage(outputPtr, eOrientationTopDown);
+  Common::Image<float> outputImage(outputPtr, Common::eOrientationTopDown);
   if(localized)
   {
     openMVG::image::Image<unsigned char> undistortedImage;
@@ -723,7 +723,7 @@ bool CameraLocalizerPlugin::getInputInGrayScale(double time, unsigned int inputC
     return false;
   }
   
-  Image<float> inputImage(inputPtr, eOrientationTopDown);
+  Common::Image<float> inputImage(inputPtr, Common::eOrientationTopDown);
   
   outputImage.resize(inputImage.getWidth(), inputImage.getHeight());
   
