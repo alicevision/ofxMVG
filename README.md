@@ -33,3 +33,7 @@ export OFX_PLUGIN_PATH=/path/to/ofxMVG/install
 ```
 Then launch your preferred [OpenFX](http://openeffects.org) Host.
 Currently, the plugins have only been tested in Nuke.
+
+## License
+
+The plugins are released under the [MPL License](LICENSE.md).
