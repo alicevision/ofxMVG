@@ -13,10 +13,40 @@
 #include <openMVG/dataio/FeedProvider.hpp>
 
 #include <memory>
+#include <mutex>
+
 
 namespace openMVG_ofx {
 namespace Localizer {
 
+//FrameData structure for cache result
+struct FrameData
+{
+  bool localized;
+  openMVG::localization::LocalizationResult localizationResult;
+  std::vector<openMVG::features::SIOPointFeature> extractedFeatures;
+  openMVG::Mat undistortedPt2D;
+  mutable std::mutex mutex;
+  
+  /**
+   * @brief Assignment copy operator
+   * @param other
+   * @return 
+   */
+  FrameData& operator=(FrameData const &other) 
+  {
+    localized = other.localized;
+    localizationResult = other.localizationResult;
+    extractedFeatures = other.extractedFeatures;
+    undistortedPt2D = other.undistortedPt2D;
+    //the mutex can't be copied
+    
+    return *this;
+  }
+};
+
+
+//ProcessData structure for localization process
 struct LocalizerProcessData
 {
   std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3> queryIntrinsics;
@@ -139,7 +169,11 @@ void setStatToParamsAtTime(
  */
 void convertRGB32ToGRAY8(const Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage);
 
-
+/**
+ * @brief convert a 32 bits float grayscale image to an (unsigned char) 8 bits image
+ * @param inputImage
+ * @param outputImage
+ */
 void convertGGG32ToGRAY8(const Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage);
 
 /**

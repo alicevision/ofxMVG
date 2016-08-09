@@ -11,7 +11,7 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsInteract.h"
-
+#include "CameraLocalizerPlugin.hpp"
 namespace openMVG_ofx {
 namespace Localizer {
 
@@ -23,7 +23,8 @@ static const OfxPointD kBoxSize = {20, 20};
 
 class CameraLocalizerInteract : public OFX::OverlayInteract
 {
-  CameraLocalizerPlugin* _plugin;
+private:
+  const CameraLocalizerPlugin* _plugin;
   
 protected:
   enum StateEnum {

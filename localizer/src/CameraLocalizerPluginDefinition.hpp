@@ -54,7 +54,19 @@
 //Advanced Parameters
 #define kParamGroupAdvanced "groupAdvanced"
 
-#define kParamOverlay "overlay"
+#define kParamAdvancedGroupOverlay "groupAdvancedOverlay"
+
+#define kParamAdvancedOverlayDetectedFeatures "advancedOverlayDetectedFeatures"
+#define kParamAdvancedOverlayMatchedFeatures "advancedOverlayMatchedFeatures"
+#define kParamAdvancedOverlayResectionFeatures "advancedOverlayResectionFeatures"
+#define kParamAdvancedOverlayReprojectionError "advancedOverlayReprojectionError"
+#define kParamAdvancedOverlayReconstructionVisibility "advancedOverlayReconstructionVisibility"
+#define kParamAdvancedOverlayFeaturesId "advancedOverlayId"
+#define kParamAdvancedOverlayFeaturesScaleOrientation "advancedOverlayScaleOrientation"
+#define kParamAdvancedOverlayFeaturesScaleOrientationRadius "advancedOverlayScaleOrientationRadius"
+#define kParamAdvancedOverlayTracks "advancedOverlayTracks"
+#define kParamAdvancedOverlayTracksWindowSize "advancedOverlayTracksWindowSize"
+
 #define kParamAdvancedAlgorithm "advancedAlgorithm"
 #define kParamAdvancedEstimatorMatching "advancedEstimatorMatching"
 #define kParamAdvancedEstimatorResection "advancedEstimatorResection"
@@ -69,6 +81,16 @@
 #define kParamAdvancedUseGuidedMatching "advancedUseGuidedMatching"
 #define kParamAdvancedDebugFolder "advancedDebugFolder"
 #define kParamAdvancedDebugAlwaysComputeFrame "advancedDebugAlwaysComputeFrame"
+
+#define kParamAdvancedGroupSfMData "groupAdvancedSfMData"
+
+#define kParamAdvancedSfMDataViewsRootPath "advancedSfMDataViewsRootPath"
+#define kParamAdvancedSfMDataNbViews "advancedSfMDataNbViews"
+#define kParamAdvancedSfMDataNbPoses "advancedSfMDataNbPoses"
+#define kParamAdvancedSfMDataNbIntrinsics "advancedSfMDataNbIntrinsics"
+#define kParamAdvancedSfMDataNbStructures "advancedSfMDataNbStructures"
+#define kParamAdvancedSfMDataNbControlPoints "advancedSfMDataNbControlPoints"
+
 
 //Tracking Parameters
 #define kParamGroupTracking "groupTracking"
@@ -108,8 +130,9 @@
 #define kParamOutputStatNbInlierFeatures(I) "outputStatNbInlierFeatures_" + std::to_string(I)
 
 //Cache Parameters
-#define kParamOutputClear "outputClear"
-#define kParamOutputClearCurrentFrame "outputClearCurrentFrame"
+#define kParamCacheSerializedResults "cacheSerializedResults"
+#define kParamCacheClear "cacheClear"
+#define kParamCacheClearCurrentFrame "cacheClearCurrentFrame"
 
 //Invalidation Parameters
 #define kParamForceInvalidation "forceInvalidation"
