@@ -195,7 +195,7 @@ void setStatToParamsAtTime(
     outputStatNbInlierFeatures->setValueAtTime(time, localizationResult.getInliers().size());
 }
 
-void convertRGB32ToGRAY8(const Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage)
+void convertRGB32ToGRAY8(const Common::Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage)
 {
   for(unsigned int y = 0; y < outputImage.Height(); ++y)
   {
@@ -208,7 +208,7 @@ void convertRGB32ToGRAY8(const Image<float>& inputImage, openMVG::image::Image<u
   }
 }
 
-void convertGGG32ToGRAY8(const Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage)
+void convertGGG32ToGRAY8(const Common::Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage)
 {
   for(unsigned int y = 0; y < outputImage.Height(); ++y)
   {
@@ -221,7 +221,7 @@ void convertGGG32ToGRAY8(const Image<float>& inputImage, openMVG::image::Image<u
   }
 }
 
-void convertGRAY8ToRGB32(openMVG::image::Image<unsigned char> &inputImage, const Image<float>& outputImage)
+void convertGRAY8ToRGB32(openMVG::image::Image<unsigned char> &inputImage, const Common::Image<float>& outputImage)
 {
   for(unsigned int y = 0; y < inputImage.Height(); ++y)
   {

@@ -3,7 +3,7 @@
 #include <iostream>
 
 namespace openMVG_ofx {
-namespace Localizer {
+namespace Common {
 
 template<typename DataType>
 Image<DataType>::Image()
@@ -234,6 +234,6 @@ void Image<DataType>::checkSameDimensions(const std::vector< Image<DataType> > &
 template class Image<float>;
 
 
-} //namespace Localizer
+} //namespace Common
 } //namespace openMVG_ofx
 

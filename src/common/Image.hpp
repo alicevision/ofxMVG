@@ -4,7 +4,7 @@
 #include <vector>
 
 namespace openMVG_ofx {
-namespace Localizer {
+namespace Common {
   
 enum EImageOrientation
 {
@@ -179,5 +179,5 @@ private:
 };
   
 
-} //namespace Localizer
+} //namespace Common
 } //namespace openMVG_ofx

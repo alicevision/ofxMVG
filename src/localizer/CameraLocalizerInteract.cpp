@@ -1,5 +1,9 @@
 #include "CameraLocalizerInteract.hpp"
-#include "stb_easy_font.h"
+
+#include "CameraLocalizerPlugin.hpp"
+
+#include "../common/stb_easy_font.h"
+
 #include <cmath>
 
 namespace openMVG_ofx {
