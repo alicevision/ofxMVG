@@ -61,7 +61,12 @@ bool CameraLocalizerInteract::draw(const OFX::DrawArgs &args)
   {
     return false;
   }
-  
+
+  std::array<float, 3> colorDetected = {.6f, .5f, .5f};
+  std::array<float, 3> colorMatched = {1.f, 0.5f, 0.5f};
+  std::array<float, 3> colorTrackMatchHole = {.7f, .0f, .7f};
+  std::array<float, 3> colorResection = {.5f, 1.f, .5f};
+
   //Get frame cache and check mutex
   const FrameData& frameCachedData = _plugin->getFrameDataCache(args.time);
   //std::lock_guard<std::mutex> guard(frameCachedData.mutex);
@@ -82,7 +87,7 @@ bool CameraLocalizerInteract::draw(const OFX::DrawArgs &args)
   // Display all detected features
   if(drawDetectedFeatures)
   {
-    glColor3f(1.f, 0.f, 0.f);
+    glColor3f(colorDetected[0], colorDetected[1], colorDetected[2]);
     glPointSize(2);
     glBegin(GL_POINTS);
     
@@ -155,11 +160,160 @@ bool CameraLocalizerInteract::draw(const OFX::DrawArgs &args)
     pt2dProjected(1, i) = intrinsics.h() - projected(1);
   }
 
+
+  if(drawTracks && (drawMatchedFeatures || drawResectionFeatures))
+  {
+    int nbTracksWindowSize = _plugin->getOverlayTracksWindowSize();
+    int firstTime = args.time - nbTracksWindowSize;
+    int lastTime = args.time + nbTracksWindowSize;
+
+    std::map< openMVG::IndexT, std::map<OfxTime, std::pair<openMVG::Vec2, bool> > > pt2dTracking;
+
+    for(int time = firstTime; time < lastTime; ++time)
+    {
+      // Check if the frame at time has data in cache
+      if(!_plugin->hasFrameDataCache(time))
+        continue;
+      
+      const FrameData& frameAtTimeCachedData = _plugin->getFrameDataCache(time);
+
+      // Do not lock the current time: args.time
+      std::mutex doNotLock;
+      std::lock_guard<std::mutex> guardAtTime(time != args.time ? frameAtTimeCachedData.mutex : doNotLock);  
+      
+      if(!frameAtTimeCachedData.localized)
+        continue;
+      
+      const openMVG::localization::LocalizationResult& localizationResultAtTime = frameAtTimeCachedData.localizationResult;
+      const openMVG::Mat& pt2d = frameAtTimeCachedData.undistortedPt2D; 
+      
+      std::vector<bool> isInlier(pt2d.cols(), false);
+      for(std::size_t i: localizationResultAtTime.getInliers())
+      {
+        isInlier[i] = true;
+      }
+
+      for(std::size_t i = 0; i < pt2d.cols(); ++i)
+      {
+        // Vertical flip: OpenFX is bottomUp and openMVG is topDown
+        openMVG::Vec2 point = pt2d.col(i);
+        point(1) = intrinsics.h() - point(1);
+
+        openMVG::IndexT id = localizationResultAtTime.getIndMatch3D2D()[i].first;
+
+        auto it = pt2dTracking.find(id);
+
+        if (it != pt2dTracking.end())
+        {
+          // add the current point to the it's id map
+          it->second.emplace(time, std::pair<openMVG::Vec2, bool>(point, isInlier[i]) );
+        }
+        else
+        {
+          // create point id map and add it
+          std::map<OfxTime, std::pair<openMVG::Vec2, bool> > points;
+          points[time] = std::pair<openMVG::Vec2, bool>(point, isInlier[i]);
+          pt2dTracking.emplace(id, points);
+        }
+      }
+      
+    }
+
+    //draw tracks
+    glLineWidth(1);
+    for(auto &pt2dIt : pt2dTracking)
+    {
+      OfxTime firstTime = pt2dIt.second.begin()->first;
+      OfxTime lastTime = pt2dIt.second.rbegin()->first;
+      
+      if(!drawMatchedFeatures)
+      {
+        // determine the first/last times without outliers
+        firstTime = kOfxFlagInfiniteMax;
+        lastTime = -kOfxFlagInfiniteMax;
+        for(auto it = pt2dIt.second.begin(); it != pt2dIt.second.end(); ++it)
+        {
+          // if it's an inlier
+          if(it->second.second)
+          {
+            firstTime = it->first;
+            break;
+          }
+        }
+        for(auto it = pt2dIt.second.rbegin(); it != pt2dIt.second.rend(); ++it)
+        {
+          // if it's an inlier
+          if(it->second.second)
+          {
+            lastTime = it->first;
+            break;
+          }
+        }
+      }
+      
+      if(firstTime > args.time || lastTime < args.time)
+        continue;
+      
+      //draw lines
+      if(pt2dIt.second.size() > 1)
+      {
+        glBegin(GL_LINES);
+        auto pointAtTimeA = pt2dIt.second.cbegin();
+        auto pointAtTimeB = pt2dIt.second.cbegin();
+        
+        for(++pointAtTimeB;
+            pointAtTimeB != pt2dIt.second.cend();
+            ++pointAtTimeA, ++pointAtTimeB)
+        {
+          bool segmentWithValidResection =
+              (pointAtTimeA->second.second == true) &&
+              (pointAtTimeB->second.second == true);
+          
+          if(!drawMatchedFeatures && !segmentWithValidResection)
+            // Skip the segment if we only draw the inliers and the sement is not a resectioning inlier
+            continue;
+          
+          if(pointAtTimeB->first - pointAtTimeA->first != 1)
+            // Non-contiguous features in the track, which mean that this track is not matched at all between these frames.
+            glColor3f(colorTrackMatchHole[0], colorTrackMatchHole[1], colorTrackMatchHole[2]);
+          else if(!drawResectionFeatures || !segmentWithValidResection)
+            // The 2 features of the track are contiguous but at least one of them is not a resectioning inlier
+            glColor3f(colorMatched[0], colorMatched[1], colorMatched[2]);
+          else
+            // Display resection inlier with color if segmentWithValidResection and drawResectionFeatures
+            glColor3f(colorResection[0], colorResection[1], colorResection[2]);
+          
+          glVertex2f(pointAtTimeA->second.first(0), pointAtTimeA->second.first(1));
+          glVertex2f(pointAtTimeB->second.first(0), pointAtTimeB->second.first(1));
+        }
+        glEnd();
+      }
+
+      //draw points
+      glPointSize(2);
+      glBegin(GL_POINTS);
+      for(auto &point : pt2dIt.second)
+      {
+        if(drawResectionFeatures && (point.second.second == true) ) //is ResectionFeatures
+        {
+          glColor3f(colorResection[0], colorResection[1], colorResection[2]);
+          glVertex2f(point.second.first(0), point.second.first(1));
+        }
+        else if(drawMatchedFeatures)
+        {
+          glColor3f(colorMatched[0], colorMatched[1], colorMatched[2]);
+          glVertex2f(point.second.first(0), point.second.first(1));
+        }
+      }
+      glEnd();
+    }
+  }
+  
   
   // Matched points
   if(drawMatchedFeatures)
   {
-    glColor3f(1.f, 0.5f, 0.5f);
+    glColor3f(colorMatched[0], colorMatched[1], colorMatched[2]);
     glPointSize(4);
 
     for(std::size_t i = 0; i < pt2dDetected.cols(); ++i)
@@ -219,7 +373,7 @@ bool CameraLocalizerInteract::draw(const OFX::DrawArgs &args)
   // Resectioning points inliers    
   if(drawResectionFeatures)
   {
-    glColor3f(.5f, 1.f, .5f);
+    glColor3f(colorResection[0], colorResection[1], colorResection[2]);
     glPointSize(4);
 
     for(std::size_t i: localizationResult.getInliers())
@@ -274,214 +428,7 @@ bool CameraLocalizerInteract::draw(const OFX::DrawArgs &args)
       glEnd();
     }
   }
-
-
-  if(drawTracks)
-  {
-    int nbTracksWindowSize = _plugin->getOverlayTracksWindowSize();
-    int firstTime = args.time - nbTracksWindowSize;
-    int lastTime = args.time + nbTracksWindowSize;
-
-    std::map< openMVG::IndexT, std::map<OfxTime, openMVG::Vec2> > pt2dTracking;
-
-    for(int time = firstTime; time < lastTime; ++time)
-    {
-      std::cout << "[Overlay] Tracking Time : " << time << std::endl;
-
-      if(!_plugin->hasFrameDataCache(time))
-        continue;
-      
-      const FrameData& frameAtTimeCachedData = _plugin->getFrameDataCache(time);
-
-      // Do not lock the current time: args.time
-      std::mutex doNotLock;
-      std::lock_guard<std::mutex> guardAtTime(time != args.time ? frameAtTimeCachedData.mutex : doNotLock);  
-      
-      if(!frameAtTimeCachedData.localized)
-        continue;
-      
-      const openMVG::localization::LocalizationResult& localizationResultAtTime = frameAtTimeCachedData.localizationResult;
-      const openMVG::Mat& pt2d = frameAtTimeCachedData.undistortedPt2D; 
-
-      const std::size_t minIndex = 0;
-      const std::size_t maxIndex = std::min(minIndex + 10000, localizationResultAtTime.getInliers().size());
-
-      for(std::size_t index = minIndex; index < maxIndex; ++index)
-      {
-        const std::size_t i = localizationResultAtTime.getInliers()[index];
-        
-        // Vertical flip: OpenFX is bottomUp and openMVG is topDown
-        openMVG::Vec2 point = pt2d.col(i);//
-        point(1) = intrinsics.h() - point(1);
-
-        openMVG::IndexT id = localizationResultAtTime.getIndMatch3D2D()[i].first;
-
-        auto it = pt2dTracking.find(id);
-
-        if (it != pt2dTracking.end())
-        {
-          it->second.emplace(time, point);
-        }
-        else
-        {
-          std::map<OfxTime, openMVG::Vec2> points;
-          points[time] = point;
-          pt2dTracking.emplace(id, points);
-        }
-      }
-      
-    }
-
-    //draw tracks
-    glLineWidth(1);
-    for(auto &pt2dIt : pt2dTracking)
-    {
-      OfxTime firstTime = pt2dIt.second.begin()->first;
-      OfxTime lastTime = pt2dIt.second.rbegin()->first;
-      if(firstTime > args.time || lastTime < args.time)
-        continue;
-      std::array<float, 3> lineColor;
-      std::array<float, 3> pointColor;
-      if(pt2dIt.second.find(args.time) != pt2dIt.second.end())
-      {
-        // If the track is visible in current frame
-        lineColor = {.6f, .3f, 0.f};
-        pointColor = {1.f, .6f, .2f};
-      }
-      else
-      {
-        // If the track is visible before and after the current frame but not
-        // visible on the current frame
-        lineColor = {.35f, .2f, 0.f};
-        pointColor = {.6f, .3f, 0.f};
-      }
-
-      //draw lines
-      if(pt2dIt.second.size() > 1)
-      {
-        glBegin(GL_LINES);
-        auto pointAtTimeA = pt2dIt.second.cbegin();
-        auto pointAtTimeB = pt2dIt.second.cbegin();
-        for(++pointAtTimeB;
-            pointAtTimeB != pt2dIt.second.cend();
-            ++pointAtTimeA, ++pointAtTimeB)
-        {
-          if(pointAtTimeB->first - pointAtTimeA->first == 1)
-            glColor3f(lineColor[0], lineColor[1], lineColor[2]);
-          else
-            glColor3f(1.f, .2f, .2f);
-          glVertex2f(pointAtTimeA->second(0), pointAtTimeA->second(1));
-          glVertex2f(pointAtTimeB->second(0), pointAtTimeB->second(1));
-        }
-        glEnd();
-      }
-
-      //draw points
-      glColor3f(pointColor[0], pointColor[1], pointColor[2]);
-      glPointSize(2);
-      glBegin(GL_POINTS);
-      for(auto &point : pt2dIt.second)
-        glVertex2f(point.second(0), point.second(1));
-      glEnd();
-    }
-
-
-    glEnd();
-  }
-  
   return true;
-}
-
-// overridden functions from OFX::Interact to do things
-bool CameraLocalizerInteract::penMotion(const OFX::PenArgs &args)
-{
-//  // figure the size of the box in cannonical coords
-//  float dx = (float)(kBoxSize.x * args.pixelScale.x);
-//  float dy = (float)(kBoxSize.y * args.pixelScale.y);
-//
-//  // pen position is in cannonical coords
-//  OfxPointD penPos = args.penPosition;
-//
-//  switch(_state) {
-//    case eInActive: 
-//    case ePoised: 
-//    {
-//      // are we in the box, become 'poised'
-//      StateEnum newState;
-//      penPos.x -= _position.x;
-//      penPos.y -= _position.y;
-//      if(Absolute(penPos.x) < dx &&
-//        Absolute(penPos.y) < dy) {
-//          newState = ePoised;
-//      }
-//      else {
-//        newState = eInActive;
-//      }
-//
-//      if(_state != newState) {
-//        // we have a new state
-//        _state = newState;
-//
-//        // and force an overlay redraw
-//        _effect->redrawOverlays();
-//      }
-//    }
-//    break;
-//    case ePicked:
-//    {
-//      // move our position
-//      _position = penPos;
-//
-//      // and force an overlay redraw
-//      _effect->redrawOverlays();
-//    }
-//    break;
-//  }
-//
-//  // we have trapped it only if the mouse ain't over it or we are actively dragging
-//  return _state != eInActive;
-  return false;
-}
-
-bool CameraLocalizerInteract::penDown(const OFX::PenArgs &args)
-{
-//  // this will refigure the state
-//  penMotion(args);
-//
-//  // if poised means we were over it when the pen went down, so pick it
-//  if(_state == ePoised) {
-//    // we are now picked
-//    _state = ePicked;
-//
-//    // move our position
-//    _position = args.penPosition;
-//
-//    // and request a redraw just incase
-//    _effect->redrawOverlays();
-//  }
-//
-//  return _state == ePicked;
-  return false;
-}
-
-bool CameraLocalizerInteract::penUp(const OFX::PenArgs &args)
-{
-//  if(_state == ePicked) {
-//    // reset to poised for a moment
-//    _state = ePoised;
-//
-//    // this will refigure the state
-//    penMotion(args);
-//
-//    // and redraw for good measure
-//    _effect->redrawOverlays();
-//
-//    // we did trap it
-//    return true;
-//  }
-
-  // we didn't trap it
-  return false;
 }
 
 }
