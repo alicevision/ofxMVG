@@ -600,16 +600,6 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       groupSfM->setLabel("SfM Data Information");
       groupSfM->setOpen(false);
       groupSfM->setParent(*groupAdvanced);
-      
-      {
-        OFX::StringParamDescriptor *param = desc.defineStringParam(kParamAdvancedSfMDataViewsRootPath);
-        param->setLabel("Views Root Path");
-        param->setHint("Views Root Path");
-        param->setStringType(OFX::eStringTypeSingleLine);
-        param->setEvaluateOnChange(false);
-        param->setEnabled(false);
-        param->setParent(*groupSfM);
-      }
  
       {
         OFX::StringParamDescriptor *param = desc.defineStringParam(kParamAdvancedSfMDataNbViews);
@@ -623,8 +613,8 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       
       {
         OFX::StringParamDescriptor *param = desc.defineStringParam(kParamAdvancedSfMDataNbPoses);
-        param->setLabel("Nb Pose");
-        param->setHint("Nb Pose");
+        param->setLabel("Nb Poses");
+        param->setHint("Nb Poses");
         param->setStringType(OFX::eStringTypeSingleLine);
         param->setEvaluateOnChange(false);
         param->setEnabled(false);
@@ -643,8 +633,8 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       
       {
         OFX::StringParamDescriptor *param = desc.defineStringParam(kParamAdvancedSfMDataNbStructures);
-        param->setLabel("Nb Structures");
-        param->setHint("Nb Structures");
+        param->setLabel("Nb 3D points");
+        param->setHint("Nb 3D points");
         param->setStringType(OFX::eStringTypeSingleLine);
         param->setEvaluateOnChange(false);
         param->setEnabled(false);

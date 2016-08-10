@@ -160,7 +160,6 @@ void CameraLocalizerPlugin::parametersSetup()
   
   const openMVG::sfm::SfM_Data &sfMData = _processData.localizer->getSfMData();
   
-  _sfMDataViewsRootPath->setValue(sfMData.s_root_path);
   _sfMDataNbViews->setValue( std::to_string(sfMData.views.size()) );
   _sfMDataNbPoses->setValue( std::to_string(sfMData.poses.size()) ); 
   _sfMDataNbIntrinsics->setValue( std::to_string(sfMData.intrinsics.size()) ); 

@@ -84,7 +84,6 @@
 
 #define kParamAdvancedGroupSfMData "groupAdvancedSfMData"
 
-#define kParamAdvancedSfMDataViewsRootPath "advancedSfMDataViewsRootPath"
 #define kParamAdvancedSfMDataNbViews "advancedSfMDataNbViews"
 #define kParamAdvancedSfMDataNbPoses "advancedSfMDataNbPoses"
 #define kParamAdvancedSfMDataNbIntrinsics "advancedSfMDataNbIntrinsics"

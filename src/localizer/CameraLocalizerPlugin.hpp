@@ -79,7 +79,6 @@ private:
   OFX::StringParam *_debugFolder = fetchStringParam(kParamAdvancedDebugFolder);
   OFX::BooleanParam *_alwaysComputeFrame = fetchBooleanParam(kParamAdvancedDebugAlwaysComputeFrame);  
   
-  OFX::StringParam *_sfMDataViewsRootPath = fetchStringParam(kParamAdvancedSfMDataViewsRootPath);
   OFX::StringParam *_sfMDataNbViews = fetchStringParam(kParamAdvancedSfMDataNbViews);
   OFX::StringParam *_sfMDataNbPoses = fetchStringParam(kParamAdvancedSfMDataNbPoses);
   OFX::StringParam *_sfMDataNbIntrinsics = fetchStringParam(kParamAdvancedSfMDataNbIntrinsics);
