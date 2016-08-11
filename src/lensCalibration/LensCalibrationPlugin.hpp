@@ -1,6 +1,11 @@
 #pragma once
 #include "ofxsImageEffect.h"
+#include "LensCalibrationPluginFactory.hpp"
 #include "LensCalibrationPluginDefinition.hpp"
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 namespace openMVG_ofx {
 namespace LensCalibration {
@@ -14,9 +19,47 @@ private:
   //(!) Don't delete these, OFX::ImageEffect is managing them
   
   //Clips
-  OFX::Clip *_srcClip = fetchClip(KClipInput); //Source clip
+  OFX::Clip *_srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName); //Source clip
   OFX::Clip *_dstClip = fetchClip(kOfxImageEffectOutputClipName); //Destination clip
   
+  //Calibration parameters
+  OFX::Int2DParam *_inputImageSize = fetchInt2DParam(kParamImageSize);
+  OFX::BooleanParam *_inputImageIsGray = fetchBooleanParam(kParamInputImageIsGray);
+  OFX::ChoiceParam *_inputPatternType = fetchChoiceParam(kParamPatternType);
+  OFX::Int2DParam *_inputPatternSize = fetchInt2DParam(kParamPatternSize);
+  OFX::DoubleParam *_inputSquareSize = fetchDoubleParam(kParamSquareSize);
+  OFX::IntParam *_inputNbRadialCoef = fetchIntParam(kParamNbRadialCoef);
+  OFX::IntParam *_inputMaxFrames = fetchIntParam(kParamMaxFrames);
+  OFX::IntParam *_inputMaxCalibFrames = fetchIntParam(kParamMaxCalibFrames);
+  OFX::IntParam *_inputCalibGridSize = fetchIntParam(kParamCalibGridSize);
+  OFX::IntParam *_inputMinInputFrames = fetchIntParam(kParamMinInputFrames);
+  OFX::DoubleParam *_inputMaxTotalAvgErr = fetchDoubleParam(kParamMaxTotalAvgErr);
+  OFX::PushButtonParam *_outputCalibrate = fetchPushButtonParam(kParamCalibrate);
+
+  //Output parameters
+  OFX::BooleanParam *_outputIsCalibrated = fetchBooleanParam(kParamOutputIsCalibrated);
+  OFX::DoubleParam *_outputAvgReprojErr = fetchDoubleParam(kParamOutputAvgReprojErr);
+  OFX::DoubleParam *_outputCameraFocalLenght = fetchDoubleParam(kParamOutputFocalLenght);
+  OFX::Double2DParam *_outputCameraPrincipalPointOffset = fetchDouble2DParam(kParamOutputPrincipalPointOffset);
+
+  OFX::DoubleParam *_outputLensDistortionRadialCoef1 = fetchDoubleParam(kParamOutputRadialCoef1);
+  OFX::DoubleParam *_outputLensDistortionRadialCoef2 = fetchDoubleParam(kParamOutputRadialCoef2);
+  OFX::DoubleParam *_outputLensDistortionRadialCoef3 = fetchDoubleParam(kParamOutputRadialCoef3);
+  OFX::DoubleParam *_outputLensDistortionTangentialCoef1 = fetchDoubleParam(kParamOutputTangentialCoef1);
+  OFX::DoubleParam *_outputLensDistortionTangentialCoef2 = fetchDoubleParam(kParamOutputTangentialCoef2);
+  OFX::PushButtonParam *_outputClear = fetchPushButtonParam(kParamOutputClear);
+
+  //Debug parameters
+  OFX::BooleanParam *_debugEnable = fetchBooleanParam(kParamDebugEnable);
+  OFX::StringParam *_debugRejectedImgFolder = fetchStringParam(kParamDebugRejectedImgFolder);
+  OFX::StringParam *_debugSelectedImgFolder = fetchStringParam(kParamDebugSelectedImgFolder);
+
+  //Output Parameters List
+  std::vector<OFX::ValueParam*> _outputParams;
+  
+  // Cache
+  std::map<OfxTime, std::vector<cv::Point2f> > checkerPerFrame;
+
 public:
   
   /**
@@ -24,6 +67,9 @@ public:
    * @param handle
    */
   LensCalibrationPlugin(OfxImageEffectHandle handle);
+
+  /** @brief The sync private data action, called when the effect needs to sync any private data to persistant parameters */
+  void syncPrivateData();
 
   /**
    * @brief client begin sequence render function
@@ -65,6 +111,15 @@ public:
    * @param[in] paramName
    */
   virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
+  
+private:
+  void calibrateLens();
+  
+  void clearOutputParamValues()
+  {
+    for(OFX::ValueParam* outputParam: _outputParams)
+      outputParam->deleteAllKeys();
+  }
 };
 
 

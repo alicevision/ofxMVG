@@ -3,8 +3,6 @@
 namespace openMVG_ofx {
 namespace LensCalibration {
 
-using namespace OFX;
-
 bool LensCalibrationInteract::draw(const OFX::DrawArgs &args)
 {
   return true;
