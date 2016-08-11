@@ -193,22 +193,19 @@ void Image<DataType>::divide(const Image &other)
 template<typename DataType>
 void Image<DataType>::copyFrom(const Image &other)
 {
-  if(other.hasOwnership())
+  for(std::size_t y = 0; y < getHeight(); ++y)
   {
-    for(std::size_t y = 0; y < getHeight(); ++y)
+    for(std::size_t x = 0; x < getWidth(); ++x)
     {
-      for(std::size_t x = 0; x < getWidth(); ++x)
+      DataType *ptr = getPixel(x, y);
+      const DataType *otherPtr = other.getPixel(x, y);
+
+      for(std::size_t channel = 0; channel < getNbChannels(); ++channel)
       {
-        DataType *ptr = getPixel(x, y);
-        const DataType *otherPtr = other.getPixel(x, y);
+        *ptr = *otherPtr;
 
-        for(std::size_t channel = 0; channel < getNbChannels(); ++channel)
-        {
-          *ptr = *otherPtr;
-
-          ++ptr;
-          ++otherPtr;
-        }
+        ++ptr;
+        ++otherPtr;
       }
     }
   }
