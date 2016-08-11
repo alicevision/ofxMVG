@@ -1,7 +1,9 @@
-openMVG.ofx
-============
+ofxMVG
+======
 
-OFX plugins for Multiple View Geometry
+[OpenFX](http://openeffects.org) plugins for Multiple View Geometry
+
+![Camera localization screenshot](./doc/cameraLocalizationNuke.png)
 
 ## CameraLocalizer
 
@@ -26,3 +28,14 @@ cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=../install
 make install
 ```
+
+## Usage
+```
+export OFX_PLUGIN_PATH=/path/to/ofxMVG/install
+```
+Then launch your preferred [OpenFX](http://openeffects.org) Host.
+Currently, the plugins have only been tested in Nuke.
+
+## License
+
+The plugins are released under the [MPL License](LICENSE.md).

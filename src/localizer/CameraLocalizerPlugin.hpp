@@ -53,7 +53,17 @@ private:
   OFX::StringParam *_rigCalibrationFile = fetchStringParam(kParamRigCalibrationFile);
   
   //Advanced Parameters
-  OFX::BooleanParam *_overlay = fetchBooleanParam(kParamOverlay);
+  OFX::BooleanParam *_overlayDetectedFeatures = fetchBooleanParam(kParamAdvancedOverlayDetectedFeatures);
+  OFX::BooleanParam *_overlayMatchedFeatures = fetchBooleanParam(kParamAdvancedOverlayMatchedFeatures);
+  OFX::BooleanParam *_overlayResectionFeatures = fetchBooleanParam(kParamAdvancedOverlayResectionFeatures);
+  OFX::BooleanParam *_overlayReprojectionError = fetchBooleanParam(kParamAdvancedOverlayReprojectionError);
+  OFX::BooleanParam *_overlayReconstructionVisibility = fetchBooleanParam(kParamAdvancedOverlayReconstructionVisibility);
+  OFX::BooleanParam *_overlayFeaturesId = fetchBooleanParam(kParamAdvancedOverlayFeaturesId);
+  OFX::BooleanParam *_overlayFeaturesScaleOrientation = fetchBooleanParam(kParamAdvancedOverlayFeaturesScaleOrientation);
+  OFX::DoubleParam *_overlayFeaturesScaleOrientationRadius = fetchDoubleParam(kParamAdvancedOverlayFeaturesScaleOrientationRadius);
+  OFX::BooleanParam *_overlayTracks = fetchBooleanParam(kParamAdvancedOverlayTracks);
+  OFX::IntParam *_overlayTracksWindowSize = fetchIntParam(kParamAdvancedOverlayTracksWindowSize);
+  
   OFX::ChoiceParam *_algorithm = fetchChoiceParam(kParamAdvancedAlgorithm);
   OFX::ChoiceParam *_estimatorMatching = fetchChoiceParam(kParamAdvancedEstimatorMatching);
   OFX::ChoiceParam *_estimatorResection = fetchChoiceParam(kParamAdvancedEstimatorResection);
@@ -65,9 +75,15 @@ private:
   OFX::IntParam *_cctagNbNearestKeyFrames = fetchIntParam(kParamAdvancedCctagNbNearestKeyFrames);
   OFX::IntParam *_baMinPointVisibility = fetchIntParam(kParamAdvancedBaMinPointVisibility);
   OFX::DoubleParam *_distanceRatio = fetchDoubleParam(kParamAdvancedDistanceRatio);
-  OFX::BooleanParam *_useGuidedMatching = fetchBooleanParam(kParamAdvancedUseGuidedMatching);        
+  OFX::BooleanParam *_useGuidedMatching = fetchBooleanParam(kParamAdvancedUseGuidedMatching);
   OFX::StringParam *_debugFolder = fetchStringParam(kParamAdvancedDebugFolder);
   OFX::BooleanParam *_alwaysComputeFrame = fetchBooleanParam(kParamAdvancedDebugAlwaysComputeFrame);  
+  
+  OFX::StringParam *_sfMDataNbViews = fetchStringParam(kParamAdvancedSfMDataNbViews);
+  OFX::StringParam *_sfMDataNbPoses = fetchStringParam(kParamAdvancedSfMDataNbPoses);
+  OFX::StringParam *_sfMDataNbIntrinsics = fetchStringParam(kParamAdvancedSfMDataNbIntrinsics);
+  OFX::StringParam *_sfMDataNbStructures = fetchStringParam(kParamAdvancedSfMDataNbStructures);
+  OFX::StringParam *_sfMDataNbControlPoints = fetchStringParam(kParamAdvancedSfMDataNbControlPoints);
   
   //Tracking Parameters
   OFX::ChoiceParam *_trackingRangeMode = fetchChoiceParam(kParamTrackingRangeMode);
@@ -97,7 +113,7 @@ private:
   OFX::DoubleParam *_outputStatNbInlierFeatures[K_MAX_INPUTS];
   
   //Output Cache Parameters
-  OFX::PushButtonParam *_outputClear = fetchPushButtonParam(kParamOutputClear);
+  OFX::StringParam *_serializedResults = fetchStringParam(kParamCacheSerializedResults);
   
   //Invalidation Parameters
   OFX::IntParam *_forceInvalidation = fetchIntParam(kParamForceInvalidation);
@@ -115,8 +131,7 @@ private:
   std::vector<OFX::ValueParam*> _outputParams;
 
   //Cache
-  std::map<OfxTime, openMVG::localization::LocalizationResult> _localizationResultsAtTime;
-  std::map<OfxTime, std::vector<openMVG::features::SIOPointFeature> > _extractedFeaturesAtTime;
+  std::map<OfxTime, FrameData> _framesData;
 
 public:
   
@@ -173,50 +188,50 @@ public:
   virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
   
   /**
-   * Reset all plugin parameters
+   * @brief Reset all plugin parameters
    */
   void reset();
   
   /**
-   * @brief update the member connected clip index collection
+   * @brief Update the member connected clip index collection
    */
   void updateConnectedClipIndexCollection();
   
   /**
-   * @brief update camera output index parameter to fit with clip number
+   * @brief Update camera output index parameter to fit with clip number
    */
   void updateCameraOutputIndexRange();
   
   /**
-   * 
+   * @brief Update rig UI plugin options
    */
   void updateRigOptions();
   
   /**
-   * 
+   * @brief Update lens distortion UI coefficients, for the chosen input
    * @param input
    */
   void updateLensDistortion(unsigned int input);
   
   /**
-   * 
+   * @brief Update lens distortion UI plugin mode, for the chosen input
    * @param input
    */
   void updateLensDistortionMode(unsigned int input);
   
   /**
-   * 
+   * @brief Update focal length UI plugin mode, for the chosen input
    * @param input
    */
   void updateFocalLength(unsigned int input);
   
   /**
-   * 
+   * @brief Update UI tracking range
    */
   void updateTrackingRangeMode();
   
   /**
-   * 
+   * @brief
    * @param time
    * @param inputClipIdx
    * @param queryIntrinsics
@@ -224,7 +239,7 @@ public:
   bool getInputIntrinsics(double time, unsigned int inputClipIdx, openMVG::cameras::Pinhole_Intrinsic &queryIntrinsics);
   
   /**
-   * 
+   * @brief
    * @param time
    * @param inputClipIdx
    * @param outputImage
@@ -232,14 +247,85 @@ public:
    */
   bool getInputInGrayScale(double time, unsigned int inputClipIdx, openMVG::image::Image<unsigned char> &outputImage);
   
-  bool displayOverlay() const
-  {
-    return _overlay->getValue();
-  }
   
   std::size_t getNbConnectedInput() const
   {
     return _connectedClipIdx.size();
+  }
+  
+  int getOverlayTracksWindowSize() const
+  {
+    return _overlayTracksWindowSize->getValue();
+  }
+  
+  double getOverlayScaleOrientationRadius() const
+  {
+    return _overlayFeaturesScaleOrientationRadius->getValue();
+  }
+  
+  const FrameData& getFrameDataCache(OfxTime time) const
+  {
+    return _framesData.at(time);
+  }
+  
+  const openMVG::sfm::SfM_Data& getLocalizerSfMData() const
+  {
+    return _processData.localizer->getSfMData();
+  }
+    
+  bool hasOverlayDetectedFeatures() const
+  {
+    return _overlayDetectedFeatures->getValue();
+  }
+  
+  bool hasOverlayMatchedFeatures() const
+  {
+    return _overlayMatchedFeatures->getValue();
+  }
+  
+  bool hasOverlayResectionFeatures() const
+  {
+    return _overlayResectionFeatures->getValue();
+  }
+  
+  bool hasOverlayReprojectionError() const
+  {
+    return _overlayReprojectionError->getValue();
+  }
+  
+  bool hasOverlayReconstructionVisibility() const
+  {
+    return _overlayReconstructionVisibility->getValue();
+  }
+  
+  bool hasOverlayFeaturesId() const
+  {
+    return _overlayFeaturesId->getValue();
+  }
+    
+  bool hasOverlayFeaturesScaleOrientation() const
+  {
+    return _overlayFeaturesScaleOrientation->getValue();
+  }
+    
+  bool hasOverlayTracks() const
+  {
+    return _overlayTracks->getValue();
+  }
+  
+  bool hasFrameDataCache(OfxTime time) const
+  {
+    return _framesData.find(time) != _framesData.end();
+  }
+
+  bool hasAllOutputParamKey(OfxTime time) const
+  {
+    for(auto input : _connectedClipIdx)
+    {
+     if(_cameraOutputTranslate[input]->getKeyIndex(time, OFX::eKeySearchNear) == -1)
+       return false;
+    }
+    return true;
   }
   
   bool hasInput() const
@@ -264,52 +350,17 @@ public:
   
   void clearOutputParamValuesAtTime(OfxTime time)
   {
-    _localizationResultsAtTime.erase(time);
-    _extractedFeaturesAtTime.erase(time);
-    
+    _framesData.erase(time);
     for(OFX::ValueParam* outputParam: _outputParams)
       outputParam->deleteKeyAtTime(time);
   }
   
   void clearOutputParamValues()
   {
-    _localizationResultsAtTime.clear();
-    _extractedFeaturesAtTime.clear();
-
+    _framesData.clear();
     for(OFX::ValueParam* outputParam: _outputParams)
       outputParam->deleteAllKeys();
   }
-
-  bool hasCachedLocalizationResults(OfxTime time) const
-  {
-    return _localizationResultsAtTime.find(time) != _localizationResultsAtTime.end();
-  }
-
-  const openMVG::localization::LocalizationResult& getCachedLocalizationResults(OfxTime time) const
-  {
-    return _localizationResultsAtTime.at(time);
-  }
-  
-  bool hasAllOutputParamKey(OfxTime time) const
-  {
-    for(auto input : _connectedClipIdx)
-    {
-     if(_cameraOutputTranslate[input]->getKeyIndex(time, OFX::eKeySearchNear) == -1)
-       return false;
-    }
-    return true;
-  }
-
-  bool hasCachedFeatures(OfxTime time) const
-  {
-    return _extractedFeaturesAtTime.find(time) != _extractedFeaturesAtTime.end();
-  }
-
-  const std::vector<openMVG::features::SIOPointFeature>& getCachedFeatures(OfxTime time) const
-  {
-    return _extractedFeaturesAtTime.at(time);
-  }
-
 };
 
 

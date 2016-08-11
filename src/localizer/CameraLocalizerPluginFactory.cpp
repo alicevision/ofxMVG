@@ -41,7 +41,7 @@ void CameraLocalizerPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
   //Flags
   desc.setSingleInstance(false);
   desc.setHostFrameThreading(false);
-  desc.setSupportsMultiResolution(true);
+  desc.setSupportsMultiResolution(false);
   desc.setSupportsTiles(false);
   desc.setTemporalClipAccess(false);
   desc.setRenderTwiceAlways(false);
@@ -150,7 +150,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     {
       OFX::StringParamDescriptor *param = desc.defineStringParam(kParamRigCalibrationFile);
       param->setLabel("Rig Calibration File");
-      param->setHint("Rig calibration file"); //TODO FACA
+      param->setHint("Rig calibration file");
       param->setStringType(OFX::eStringTypeFilePath);
       param->setFilePathExists(true);
       param->setParent(*groupMain);
@@ -193,7 +193,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         {
           OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamInputSensorWidth(input));
           param->setLabel("Sensor Width");
-          param->setHint("sensor Width"); //TODO FACA
+          param->setHint("sensor Width");
           param->setDisplayRange(0, 100);
           param->setAnimates(false);
           param->setParent(*groupLensCalibration);
@@ -358,12 +358,109 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     groupAdvanced->setAsTab();
     
     {
-      OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOverlay);
-      param->setLabel("Overlay");
-      param->setHint("Enable overlay of matched points and resection inliers/outliers.");
-      param->setParent(*groupAdvanced);
-      param->setDefault(false);
-      param->setEvaluateOnChange(false);
+      OFX::GroupParamDescriptor *groupOverlay = desc.defineGroupParam(kParamAdvancedGroupOverlay);
+      groupOverlay->setLabel("Overlay");
+      groupOverlay->setOpen(false);
+      groupOverlay->setParent(*groupAdvanced);
+      
+      {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAdvancedOverlayDetectedFeatures);
+        param->setLabel("Detected features");
+        param->setHint("Enable overlay of detected points.");
+        param->setParent(*groupOverlay);
+        param->setDefault(false);
+        param->setEvaluateOnChange(false);
+      }
+
+      {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAdvancedOverlayMatchedFeatures);
+        param->setLabel("Matched features");
+        param->setHint("Enable overlay of matched points.");
+        param->setParent(*groupOverlay);
+        param->setDefault(false);
+        param->setEvaluateOnChange(false);
+      }
+
+      {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAdvancedOverlayResectionFeatures);
+        param->setLabel("Resection features");
+        param->setHint("Enable overlay of resection inliers/outliers.");
+        param->setParent(*groupOverlay);
+        param->setDefault(false);
+        param->setEvaluateOnChange(false);
+      }
+
+      {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAdvancedOverlayReprojectionError);
+        param->setLabel("Reprojection Error");
+        param->setHint("Enable overlay of reprojection error.");
+        param->setParent(*groupOverlay);
+        param->setDefault(false);
+        param->setEvaluateOnChange(false);
+      }
+
+      {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAdvancedOverlayReconstructionVisibility);
+        param->setLabel("Reconstruction Visibility");
+        param->setHint("Enable overlay of visibility in reconstruction for all points of the reconstruction");
+        param->setParent(*groupOverlay);
+        param->setDefault(false);
+        param->setEvaluateOnChange(false);
+      }
+      
+      {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAdvancedOverlayFeaturesId);
+        param->setLabel("Features Id");
+        param->setHint("Enable overlay of features id");
+        param->setParent(*groupOverlay);
+        param->setDefault(false);
+        param->setEvaluateOnChange(false);
+      }
+      {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAdvancedOverlayFeaturesScaleOrientation);
+        param->setLabel("Features Scale / Orientation");
+        param->setHint("Enable overlay of features scale and orientation");
+        param->setParent(*groupOverlay);
+        param->setDefault(false);
+        param->setEvaluateOnChange(false);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+      }
+      
+      {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAdvancedOverlayFeaturesScaleOrientationRadius);
+        param->setLabel("Radius");
+        param->setHint("Radius scale factor for overlay.");
+        param->setRange(0, kOfxFlagInfiniteMax); // only positive number
+        param->setDisplayRange(1, 40);
+        param->setDefault(3);
+        param->setAnimates(false);
+        param->setParent(*groupOverlay);
+        param->setEvaluateOnChange(false);
+      }
+
+      {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAdvancedOverlayTracks);
+        param->setLabel("Tracking");
+        param->setHint("Enable overlay of visibility in tracking.");
+        param->setParent(*groupOverlay);
+        param->setDefault(false);
+        param->setEvaluateOnChange(false);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        
+      }
+      
+      {
+        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamAdvancedOverlayTracksWindowSize);
+        param->setLabel("Frames Window Size");
+        param->setHint("Number of frames before/after the current frame to display feature tracks.");
+        param->setRange(0, kOfxFlagInfiniteMax); // only positive number
+        param->setDisplayRange(1, 10);
+        param->setDefault(3);
+        param->setAnimates(false);
+        param->setParent(*groupOverlay);
+        param->setEvaluateOnChange(false);
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+      }
     }
 
     {
@@ -495,6 +592,64 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setAnimates(false);
       param->setDefault(false);
       param->setParent(*groupAdvanced);
+      param->setLayoutHint(OFX::eLayoutHintDivider);
+    }
+     
+    {
+      OFX::GroupParamDescriptor *groupSfM = desc.defineGroupParam(kParamAdvancedGroupSfMData);
+      groupSfM->setLabel("SfM Data Information");
+      groupSfM->setOpen(false);
+      groupSfM->setParent(*groupAdvanced);
+ 
+      {
+        OFX::StringParamDescriptor *param = desc.defineStringParam(kParamAdvancedSfMDataNbViews);
+        param->setLabel("Nb Views");
+        param->setHint("Nb Views");
+        param->setStringType(OFX::eStringTypeSingleLine);
+        param->setEvaluateOnChange(false);
+        param->setEnabled(false);
+        param->setParent(*groupSfM);
+      }
+      
+      {
+        OFX::StringParamDescriptor *param = desc.defineStringParam(kParamAdvancedSfMDataNbPoses);
+        param->setLabel("Nb Poses");
+        param->setHint("Nb Poses");
+        param->setStringType(OFX::eStringTypeSingleLine);
+        param->setEvaluateOnChange(false);
+        param->setEnabled(false);
+        param->setParent(*groupSfM);
+      }
+
+      {
+        OFX::StringParamDescriptor *param = desc.defineStringParam(kParamAdvancedSfMDataNbIntrinsics);
+        param->setLabel("Nb Intrinsics");
+        param->setHint("Nb Intrinsics");
+        param->setStringType(OFX::eStringTypeSingleLine);
+        param->setEvaluateOnChange(false);
+        param->setEnabled(false);
+        param->setParent(*groupSfM);
+      }
+      
+      {
+        OFX::StringParamDescriptor *param = desc.defineStringParam(kParamAdvancedSfMDataNbStructures);
+        param->setLabel("Nb 3D points");
+        param->setHint("Nb 3D points");
+        param->setStringType(OFX::eStringTypeSingleLine);
+        param->setEvaluateOnChange(false);
+        param->setEnabled(false);
+        param->setParent(*groupSfM);
+      }
+      
+      {
+        OFX::StringParamDescriptor *param = desc.defineStringParam(kParamAdvancedSfMDataNbControlPoints);
+        param->setLabel("Nb Control Points");
+        param->setHint("Nb Control Points");
+        param->setStringType(OFX::eStringTypeSingleLine);
+        param->setEvaluateOnChange(false);
+        param->setEnabled(false);
+        param->setParent(*groupSfM);
+      }
     }
   }
   
@@ -632,6 +787,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputFar(input));
         param->setLabel("Far");
         param->setHint("Camera output far distance");
+        param->setDefault(10000);
         param->setDisplayRange(0, 300);
         param->setAnimates(true);
         param->setEnabled(false);
@@ -771,7 +927,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
           param->setCanUndo(false);
           param->setParent(*groupStats);
 
-          param->setLayoutHint(OFX::eLayoutHintDivider); // Next section
+          param->setLayoutHint(OFX::eLayoutHintDivider); //Next section
         }
       }
       
@@ -785,7 +941,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     }
 
     {
-      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputClearCurrentFrame);
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamCacheClearCurrentFrame);
       param->setLabel("Clear Current Frame");
       param->setHint("Clear current frame values and cache");
       param->setEnabled(true);
@@ -793,12 +949,24 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     }
 
     {
-      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputClear);
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamCacheClear);
       param->setLabel("Clear All");
       param->setHint("Clear all output values and cache");
       param->setEnabled(true);
       param->setParent(*groupOutput);
     }
+  }
+
+  {
+    OFX::StringParamDescriptor *param = desc.defineStringParam(kParamCacheSerializedResults);
+    param->setLabel("Localization Results Cache");
+    param->setHint("Allow the plugin to store serialized computed results");
+    param->setIsSecret(true);
+    param->setEnabled(false);
+    param->setAnimates(true);
+    param->setStringType(OFX::eStringTypeSingleLine);
+    param->setEvaluateOnChange(false);
+    param->setCanUndo(false);
   }
   
   {
