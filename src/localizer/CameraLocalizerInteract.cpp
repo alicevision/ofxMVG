@@ -68,12 +68,12 @@ bool CameraLocalizerInteract::draw(const OFX::DrawArgs &args)
   std::array<float, 3> colorResection = {.5f, 1.f, .5f};
 
   //Get frame cache and check mutex
-  const FrameData& frameCachedData = _plugin->getFrameDataCache(args.time);
+  const FrameData& frameCachedData = _plugin->getOutputFrameDataCache(args.time);
   //std::lock_guard<std::mutex> guard(frameCachedData.mutex);
   
   openMVG::cameras::Pinhole_Intrinsic_Radial_K3 intrinsics;
 
-  if(frameCachedData.localized)
+  if(frameCachedData.isLocalized())
   {
     intrinsics = frameCachedData.localizationResult.getIntrinsics();
   }
@@ -128,7 +128,7 @@ bool CameraLocalizerInteract::draw(const OFX::DrawArgs &args)
   }
 
   // Next options only for localized frame
-  if(!frameCachedData.localized)
+  if(!frameCachedData.isLocalized())
   {
     return true;
   }
@@ -175,13 +175,13 @@ bool CameraLocalizerInteract::draw(const OFX::DrawArgs &args)
       if(!_plugin->hasFrameDataCache(time))
         continue;
       
-      const FrameData& frameAtTimeCachedData = _plugin->getFrameDataCache(time);
+      const FrameData& frameAtTimeCachedData = _plugin->getOutputFrameDataCache(time);
 
       // Do not lock the current time: args.time
       std::mutex doNotLock;
       std::lock_guard<std::mutex> guardAtTime(time != args.time ? frameAtTimeCachedData.mutex : doNotLock);  
       
-      if(!frameAtTimeCachedData.localized)
+      if(!frameAtTimeCachedData.isLocalized())
         continue;
       
       const openMVG::localization::LocalizationResult& localizationResultAtTime = frameAtTimeCachedData.localizationResult;
