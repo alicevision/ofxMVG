@@ -215,6 +215,11 @@ public:
   void reset();
   
   /**
+   * @brief serialize cache data
+   */
+  void serializeCacheData();
+  
+  /**
    * @brief Update the member connected clip index collection
    */
   void updateConnectedClipIndexCollection();
@@ -410,6 +415,7 @@ public:
     _framesData.erase(time);
     for(OFX::ValueParam* outputParam: _outputParams)
       outputParam->deleteKeyAtTime(time);
+    serializeCacheData();
   }
   
   void clearOutputParamValues()
@@ -417,6 +423,7 @@ public:
     _framesData.clear();
     for(OFX::ValueParam* outputParam: _outputParams)
       outputParam->deleteAllKeys();
+    _serializedResults->setValue("");
   }
 };
 

@@ -56,6 +56,12 @@ struct FrameData
     return *this;
   }
   
+  template<class Archive>
+  void serialize(Archive & archive)
+  {
+    archive( localizationResult, extractedFeatures ); 
+  }
+  
   bool isLocalized() const
   {
     return localizationResult.isValid();

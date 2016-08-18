@@ -4,7 +4,8 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
 
-#include <cereal/archives/portable_binary.hpp>
+#include <iostream>
+#include <cereal/archives/xml.hpp>
 #include <cereal/types/utility.hpp> 
 
 #include <openMVG/numeric/numeric.h>
@@ -385,6 +386,10 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
           _framesData[args.time] = frameDataCache;
         }
       }
+      
+      std::cout << "render : [write] update serialized data  " << std::endl;
+      //Update serialized data
+      serializeCacheData();
     }
   }
   catch(std::exception &e)
@@ -732,6 +737,8 @@ void CameraLocalizerPlugin::loadRigCalibration(const std::string &filePath)
   
 void CameraLocalizerPlugin::reset()
 {
+  std::cout << "reset : [parameters] update" << std::endl;
+  //Reset plugin parameters
   _uptodateParam = false;
   _uptodateDescriptor = false;
   
@@ -749,6 +756,35 @@ void CameraLocalizerPlugin::reset()
   updateCameraOutputIndexRange();
   
   _trackingButton->setEnabled(hasInput());
+  
+  //Reset plugin cache
+  if(_serializedResults->getValue().size() > 0)
+  {
+    std::size_t nbFrameInCache = 0; //Only for prints
+    std::cout << "reset : [cache] load serialized data" << std::endl;
+    std::istringstream serializedData(_serializedResults->getValue());
+    cereal::XMLInputArchive archive(serializedData);
+    archive(_framesData);
+    for(auto &framesDataAtTime : _framesData)
+    {
+      for(auto &cameraframeDataAtTime : framesDataAtTime.second)
+      {
+        ++nbFrameInCache;
+        cameraframeDataAtTime.second.undistortedPt2D = cameraframeDataAtTime.second.localizationResult.retrieveUndistortedPt2D();
+      }
+    }
+    std::cout << "reset : [cache] " << nbFrameInCache << " frames loaded in cache from serialized data" << std::endl;
+  }
+}
+
+void CameraLocalizerPlugin::serializeCacheData()
+{
+  std::stringstream serializedData;
+  {
+    cereal::XMLOutputArchive archive( serializedData );
+    archive( CEREAL_NVP(_framesData) );
+  }
+  _serializedResults->setValue( serializedData.str() );
 }
 
 void CameraLocalizerPlugin::updateConnectedClipIndexCollection()
