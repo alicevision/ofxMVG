@@ -20,6 +20,9 @@
 #define kParamDescriptorsFolder "descriptorsFolder"
 #define kParamVoctreeFile "voctreeFile"
 #define kParamRigMode "rigMode"
+#define kParamRigCalibration "rigCalibration"
+#define kParamRigCalibrationWantSave "rigCalibrationWantSave"
+#define kParamRigCalibrationSave "rigCalibrationSave"
 #define kParamRigCalibrationFile "rigCalibrationFile"
 
 

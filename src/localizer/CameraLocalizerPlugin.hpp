@@ -50,6 +50,9 @@ private:
   OFX::StringParam *_descriptorsFolder = fetchStringParam(kParamDescriptorsFolder);
   OFX::StringParam *_voctreeFile = fetchStringParam(kParamVoctreeFile);
   OFX::ChoiceParam *_rigMode = fetchChoiceParam(kParamRigMode);
+  OFX::PushButtonParam *_rigCalibration = fetchPushButtonParam(kParamRigCalibration);
+  OFX::BooleanParam *_rigCalibrationWantSave = fetchBooleanParam(kParamRigCalibrationWantSave);
+  OFX::StringParam *_rigCalibrationSavePath = fetchStringParam(kParamRigCalibrationSave);
   OFX::StringParam *_rigCalibrationFile = fetchStringParam(kParamRigCalibrationFile);
   
   //Advanced Parameters
@@ -125,7 +128,7 @@ private:
   bool _uptodateDescriptor = false;
 
   //Connected clip index vector
-  std::vector<unsigned int> _connectedClipIdx;
+  std::vector<std::size_t> _connectedClipIdx;
 
   //Output Parameters List
   std::vector<OFX::ValueParam*> _outputParams;
@@ -146,6 +149,12 @@ public:
    */
   void parametersSetup();
 
+  /**
+   * @brief Set regin of definition for the right input
+   * @param[in] args
+   * @param[out] rod
+   * @return 
+   */
   bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
 
   /**
@@ -190,6 +199,17 @@ public:
   virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
   
   /**
+   * @brief Try to calibrate the Rig in input from cache data
+   */
+  void calibrateRig();
+  
+  /**
+   * @brief Load Rig Calibration From a file
+   * @param[in] filePath
+   */
+  void loadRigCalibration(const std::string &filePath);
+  
+  /**
    * @brief Reset all plugin parameters
    */
   void reset();
@@ -211,21 +231,21 @@ public:
   
   /**
    * @brief Update lens distortion UI coefficients, for the chosen input
-   * @param input
+   * @param[in] input
    */
-  void updateLensDistortion(unsigned int input);
+  void updateLensDistortion(std::size_t input);
   
   /**
    * @brief Update lens distortion UI plugin mode, for the chosen input
-   * @param input
+   * @param[in] input
    */
-  void updateLensDistortionMode(unsigned int input);
+  void updateLensDistortionMode(std::size_t input);
   
   /**
    * @brief Update focal length UI plugin mode, for the chosen input
-   * @param input
+   * @param[in] input
    */
-  void updateFocalLength(unsigned int input);
+  void updateFocalLength(std::size_t input);
   
   /**
    * @brief Update UI tracking range
@@ -233,22 +253,41 @@ public:
   void updateTrackingRangeMode();
   
   /**
-   * @brief
-   * @param time
-   * @param inputClipIdx
-   * @param queryIntrinsics
-   */
-  bool getInputIntrinsics(double time, unsigned int inputClipIdx, openMVG::cameras::Pinhole_Intrinsic &queryIntrinsics);
-  
-  /**
-   * @brief
-   * @param time
-   * @param inputClipIdx
-   * @param outputImage
+   * @brief Update UI Output parameters with localization results
+   * @param[in] time
+   * @param[in] clipIndex
+   * @param[in] locResults
+   * @param[in] extractedFeatures
    * @return 
    */
-  bool getInputInGrayScale(double time, unsigned int inputClipIdx, openMVG::image::Image<unsigned char> &outputImage);
+  void updateOutputParamAtTime(double time, 
+                                std::size_t clipIndex, 
+                                const openMVG::localization::LocalizationResult& locResults, 
+                                const std::vector<openMVG::features::SIOPointFeature>& extractedFeatures);
   
+  /**
+   * @brief Set a pose from the given input
+   * @param[in] clipIndex
+   * @param[out] subPose
+   */
+  void getInputSubPose(std::size_t clipIndex, openMVG::geometry::Pose3& subPose);
+  
+  /**
+   * @brief Set intrinsics from the given input and time
+   * @param[in] time
+   * @param[in] inputClipIdx
+   * @param[out] queryIntrinsics
+   */
+  bool getInputIntrinsics(double time, std::size_t clipIndex, openMVG::cameras::Pinhole_Intrinsic &queryIntrinsics);
+  
+  /**
+   * @brief Set a map of grayscale image from input
+   * @param[in] time
+   * @param[out] mapInputImage
+   * @return 
+   */
+  bool getInputsInGrayScale(double time, std::map< std::size_t, openMVG::image::Image<unsigned char> > &mapInputImage);
+
   
   std::size_t getNbConnectedInput() const
   {
@@ -349,6 +388,11 @@ public:
   bool isRigInInput() const
   {
     return (_connectedClipIdx.size() > 1);
+  }
+  
+  bool isRigModeUnknown()
+  {
+    return (static_cast<EParamRigMode>(_rigMode->getValue()) == eParamRigModeUnKnown);
   }
 
   void invalidRender()

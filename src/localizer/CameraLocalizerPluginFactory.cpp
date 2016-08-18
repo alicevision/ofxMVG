@@ -60,7 +60,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(false);
     srcClip->setIsMask(false);
-    srcClip->setOptional(input > 0);
+    srcClip->setOptional(true);
   }
 
   //Output clip
@@ -144,6 +144,33 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setHint("Is the camera rig calibrated?");
       param->appendOptions(kStringParamRigMode);
       param->setDefault(eParamRigModeUnKnown);
+      param->setParent(*groupMain);
+    }
+    
+    {
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamRigCalibration);
+      param->setLabel("Calibrate");
+      param->setHint("Calibrate RIG with computed keyframes");
+      param->setParent(*groupMain);
+       param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+    }
+    
+    {
+      OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamRigCalibrationWantSave);
+      param->setLabel("Save Rig Calibration");
+      param->setHint("Save Rig calibration?");
+      param->setAnimates(false);
+      param->setDefault(false);
+      param->setEvaluateOnChange(false);
+      param->setParent(*groupMain);
+    }
+
+    {
+      OFX::StringParamDescriptor *param = desc.defineStringParam(kParamRigCalibrationSave);
+      param->setLabel("Rig Calibration Save Path");
+      param->setHint("Path to save RIG Calibration File");
+      param->setStringType(OFX::eStringTypeFilePath);
+      param->setEvaluateOnChange(false);
       param->setParent(*groupMain);
     }
 

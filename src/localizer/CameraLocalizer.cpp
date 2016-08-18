@@ -9,24 +9,26 @@ namespace openMVG_ofx {
 namespace Localizer {
 
 void LocalizerProcessData::extractFeatures(
-      const std::vector< openMVG::image::Image<unsigned char> > &vecImageGray,
+      const std::map< std::size_t, openMVG::image::Image<unsigned char> > &mapImageGray,
       std::vector< std::unique_ptr<openMVG::features::Regions> > &vecQueryRegions) const
 {
   openMVG::features::SIFT_Image_describer imageDescriber;
   imageDescriber.Set_configuration_preset(param->_featurePreset);
+  
+  auto inputImageGrey = mapImageGray.begin();
     
-  for(unsigned int i = 0; i < vecImageGray.size(); ++i)
+  for(unsigned int i = 0; i < mapImageGray.size(); ++i)
   {
     std::cout << "[features]\tExtract SIFT : input " << i << std::endl;
     // outQueryRegions.reset(new openMVG::features::SIFT_Regions());
-    auto detect_start = std::chrono::steady_clock::now();
     
-    imageDescriber.Describe(vecImageGray[i], vecQueryRegions[i], nullptr);
+    auto detect_start = std::chrono::steady_clock::now();
+    imageDescriber.Describe( inputImageGrey->second, vecQueryRegions[i], nullptr);
+    ++inputImageGrey;
     
     auto detect_end = std::chrono::steady_clock::now();
     auto detect_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(detect_end - detect_start);
     std::cout << "[features]\tExtract SIFT done: found " << vecQueryRegions[i]->RegionCount() << " features in " << detect_elapsed.count() << " [ms]" << std::endl;
-
   }
 }
 
@@ -149,13 +151,13 @@ void setPoseToParamsAtTime(
   openMVG::Vec3 translation = pose.center();
   cameraOutputTranslate->setValueAtTime(time, translation(0), translation(1), translation(2));
 
-// ZYX: 0 1 2
-// Decompose the rotation in ZXY angles
-//  std::ifstream f("/tmp/fixRotation.txt");
+  // ZYX: 0 1 2
+  // Decompose the rotation in ZXY angles
+  //  std::ifstream f("/tmp/fixRotation.txt");
   int a=0, b=1, c=2;
-//  f >> a;
-//  f >> b;
-//  f >> c;
+  //  f >> a;
+  //  f >> b;
+  //  f >> c;
   openMVG::Vec3 rotationAngles = (fixOrientation * pose.rotation()).transpose().eulerAngles(a, b, c);
   
   double convDeg = 180.0 / M_PI;
@@ -174,10 +176,10 @@ void setIntrinsicsToParamsAtTime(
   const std::vector<double> params = intrinsics.getParams();
   cameraOutputFocalLength->setValueAtTime(time, params[0] * sensorWidth / double(intrinsics.w()) );
   cameraOutputOpticalCenter->setValueAtTime(time, params[1], params[2]);
-//  for(std::size_t i = 3; params.size(); ++i)
-//  {
-//    
-//  }
+  //  for(std::size_t i = 3; params.size(); ++i)
+  //  {
+  //    
+  //  }
 }
 
 void setStatToParamsAtTime(
