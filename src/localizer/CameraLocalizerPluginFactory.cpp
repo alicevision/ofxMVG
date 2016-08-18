@@ -315,6 +315,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
           param->setDefault(0, 0, 0);
           param->setDisplayRange(-100, -100, -100, 100, 100, 100);
           param->setAnimates(false);
+          param->setEnabled(input > 0);
           param->setParent(*groupRelativePose);
         }
 
@@ -325,6 +326,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
           param->setDefault(0, 0, 0);
           param->setDisplayRange(-100, -100, -100, 100, 100, 100);
           param->setAnimates(false);
+          param->setEnabled(input > 0);
           param->setParent(*groupRelativePose);
         }      
 
@@ -335,6 +337,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
           param->setDefault(0, 0, 0);
           param->setDisplayRange(-100, -100, -100, 100, 100, 100);
           param->setAnimates(false);
+          param->setEnabled(input > 0);
           param->setParent(*groupRelativePose);
         }
         
@@ -345,6 +348,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
           param->setDefault(0, 0, 0);
           param->setDisplayRange(-100, -100, -100, 100, 100, 100);
           param->setAnimates(false);
+          param->setEnabled(input > 0);
           param->setParent(*groupRelativePose);
         }
       }
@@ -493,7 +497,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     {
       OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAdvancedReprojectionError);
       param->setLabel("Reprojection Error");
-      param->setHint("Maximum reprojection error (in pixels) allowed for resectioning. If set to 0 it lets the ACRansac select an optimal value"); 
+      param->setHint("Maximum reprojection error (in pixels) allowed for resectioning. If set to 0 it lets the ACRansac select an optimal value."); 
       param->setDisplayRange(0, 10);
       param->setDefault(4);
       param->setAnimates(false);
@@ -503,7 +507,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     {
       OFX::IntParamDescriptor *param = desc.defineIntParam(kParamAdvancedNbImageMatch);
       param->setLabel("Nb Image Match");
-      param->setHint("Number of images to retrieve in database");
+      param->setHint("Number of images to retrieve in database to perform matching.");
       param->setDisplayRange(0, 100);
       param->setDefault(4);
       param->setAnimates(false);
@@ -513,7 +517,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     {
       OFX::IntParamDescriptor *param = desc.defineIntParam(kParamAdvancedMaxResults);
       param->setLabel("Max Results");
-      param->setHint("For algorithm AllResults, it stops the image matching when this number of matched images is reached. If 0 it is ignored.");
+      param->setHint("For algorithm AllResults, it stops the image matching when this number of valid matched images is reached. If 0 it is ignored.");
       param->setDisplayRange(0, 100);
       param->setDefault(10);
       param->setAnimates(false);

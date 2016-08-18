@@ -167,6 +167,17 @@ void CameraLocalizerPlugin::parametersSetup()
   _sfMDataNbControlPoints->setValue( std::to_string(sfMData.control_points.size()) );
 }
 
+bool CameraLocalizerPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+  if(!_srcClip[_cameraOutputIndex->getValue()-1]->isConnected())
+    // rod = OfxRectD{0,0,-1,-1};
+    throw OFX::Exception::Suite(kOfxStatFailed);
+
+  rod = _srcClip[_cameraOutputIndex->getValue()-1]->getRegionOfDefinition(args.time);
+  
+  return true;
+}
+
 void CameraLocalizerPlugin::beginSequenceRender(const OFX::BeginSequenceRenderArguments &args)
 {
   std::cout << "sequence render : begin : " << timeLineGetTime() << std::endl;
@@ -186,33 +197,38 @@ void CameraLocalizerPlugin::endSequenceRender(const OFX::EndSequenceRenderArgume
 
 void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
 {
-  std::cout << "render : time: " << args.time << std::endl;
-  std::cout << "render : fieldToRender: " << args.fieldToRender << std::endl;
-  std::cout << "render : renderQualityDraft: " << args.renderQualityDraft << std::endl;
-  std::cout << "render : renderScale: " << args.renderScale.x << ", " << args.renderScale.y << std::endl;
-  std::cout << "render : interactiveRenderStatus: " << args.interactiveRenderStatus << std::endl;
-  std::cout << "render : args.renderWindow: (" << args.renderWindow.x1 << ", " << args.renderWindow.y1 << "), (" << args.renderWindow.x2 << ", "  << args.renderWindow.y2 << ")" << std::endl;
+  std::cout << "render : [info] time: " << args.time << std::endl;
+  std::cout << "render : [info] fieldToRender: " << args.fieldToRender << std::endl;
+  std::cout << "render : [info] renderQualityDraft: " << args.renderQualityDraft << std::endl;
+  std::cout << "render : [info] renderScale: " << args.renderScale.x << ", " << args.renderScale.y << std::endl;
+  std::cout << "render : [info] interactiveRenderStatus: " << args.interactiveRenderStatus << std::endl;
+  std::cout << "render : [info] args.renderWindow: (" << args.renderWindow.x1 << ", " << args.renderWindow.y1 << "), (" << args.renderWindow.x2 << ", "  << args.renderWindow.y2 << ")" << std::endl;
 
   if(abort())
   {
     return;
   }
 
-  //Get output index
-  int outputIndex = _cameraOutputIndex->getValue() - 1;
-
-  if(!_srcClip[outputIndex]->isConnected())
+  //Get output indexes
+  int outputClipIndex = _cameraOutputIndex->getValue() - 1;
+  int outputDataIndex = getDataIndexFromClipIndex(outputClipIndex);
+  
+  std::cout << "render : [output] clip index : " << outputClipIndex << std::endl;
+  std::cout << "render : [output] data index : " << outputDataIndex << std::endl;
+  
+  if(!_srcClip[outputClipIndex]->isConnected())
   {
-    std::cerr << "invalid output index" << std::endl;
+    std::cerr << "render : [error] invalid output index" << std::endl;
     return;
   }
-  
-  //Localization Process
+ 
+  //Process Data initialization
   bool localized = false;
-  openMVG::localization::LocalizationResult localizationResult;
-  openMVG::cameras::Pinhole_Intrinsic_Radial_K3 intrinsics;
-  
+  std::vector<openMVG::localization::LocalizationResult> vecLocResults;
+  std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3> vecIntrinsics; //TODO : Change for different camera type
   std::vector<openMVG::image::Image<unsigned char> > vecImageGray(getNbConnectedInput());
+  
+  //Collect Images in input
   for(unsigned int i = 0; i < getNbConnectedInput(); ++i)
   {
     unsigned int input = _connectedClipIdx[i];
@@ -224,43 +240,53 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
 
   try
   {
-    // Don't launch the tracker if we already have a keyFrame at current time.
-    // We only need to provide the output image to nuke.
+    std::cout << "render : [info] alwaysComputeFrame : " << _alwaysComputeFrame->getValue() << std::endl;
+    std::cout << "render : [info] hasAllOutputParamKey : " << hasAllOutputParamKey(args.time) << std::endl;
+    std::cout << "render : [info] hasFrameDataCache : " << hasFrameDataCache(args.time) << std::endl;
+      
+    //Don't launch the tracker if we already have a keyFrame at current time.
+    //We only need to provide the output image to nuke.
     if(!_alwaysComputeFrame->getValue() &&
-        hasAllOutputParamKey(args.time)  && 
         hasFrameDataCache(args.time)) 
     {
       std::cout << "render : [stopped] frame already computed at frame : " << args.time << std::endl;
-      localized = true;
-      localizationResult = getFrameDataCache(args.time).localizationResult;
       
-      // TODO: remove and read intrinsics from output parameters
-      intrinsics = localizationResult.getIntrinsics();
+      for(auto &inputFrameData : getFrameDataCache(args.time))
+      {
+        vecLocResults.push_back(inputFrameData.second.localizationResult);
+        vecIntrinsics.push_back(inputFrameData.second.localizationResult.getIntrinsics()); //TODO: remove and read intrinsics from output parameters
+      }
+      std::cout << "render : [stopped] cache loaded at time : " << args.time << std::endl;
     }
     else
     {
       //Ensure Localizer is correctly initialized
-      bool isInit = _processData.localizer->isInit();
-      
-      if(!isInit)
+      if(!_processData.localizer->isInit())
       {
-        std::cerr << "Cannot initialize the camera localizer at frame " << args.time << "." << std::endl;
+        std::cerr << "render : [error] Cannot initialize the camera localizer at frame " << args.time << "." << std::endl;
         return;
       }
 
+      //Resize results vectors
+      vecLocResults.resize(getNbConnectedInput());
+      vecIntrinsics.resize(getNbConnectedInput());
+      
       //Collect Data
-      std::vector<openMVG::geometry::Pose3 > vecSubPoses(getNbConnectedInput() - 1); //Don't save main camera
-      std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3 > vecQueryIntrinsics; //TODO : Change for different camera type
-      std::vector<bool> vecHasIntrinsics(getNbConnectedInput());
+      std::vector<bool> vecQueryHasIntrinsics(getNbConnectedInput());
+      std::vector< openMVG::cameras::Pinhole_Intrinsic_Radial_K3 > vecQueryIntrinsics(getNbConnectedInput()); //TODO : Change for different camera type
+      std::vector< std::pair<std::size_t, std::size_t> > vecQueryImageSize(getNbConnectedInput()); 
+      std::vector< std::unique_ptr<openMVG::features::Regions> > vecQueryRegions(getNbConnectedInput());
+      std::vector< openMVG::geometry::Pose3 > vecQuerySubPoses(getNbConnectedInput() - 1); //Don't save main camera
 
       for(unsigned int i = 0; i < getNbConnectedInput(); ++i)
       {
         unsigned int input = _connectedClipIdx[i];
 
+        //Set query relative pose
         if(i > 0) //Don't save main camera
         {
-          auto &rotate = vecSubPoses[i - 1].rotation();
-          auto &center = vecSubPoses[i - 1].center();
+          auto &rotate = vecQuerySubPoses[i - 1].rotation();
+          auto &center = vecQuerySubPoses[i - 1].center();
 
           _inputRelativePoseRotateM1[input]->getValue(rotate(0,0), rotate(0,1), rotate(0,2));
           _inputRelativePoseRotateM2[input]->getValue(rotate(1,0), rotate(1,1), rotate(1,2));
@@ -268,166 +294,166 @@ void CameraLocalizerPlugin::render(const OFX::RenderArguments &args)
 
           _inputRelativePoseCenter[input]->getValue(center(0), center(1), center(2));
         }
-
-        //TODO : Change for different camera type
-        openMVG::cameras::Pinhole_Intrinsic_Radial_K3 queryIntrinsics(vecImageGray[i].Width(), vecImageGray[i].Height());
-        vecHasIntrinsics[input] = getInputIntrinsics(args.time, input, queryIntrinsics);
-        vecQueryIntrinsics.push_back(queryIntrinsics);
+         
+        //Set query intrinsics
+        //Initialization
+        openMVG::cameras::Pinhole_Intrinsic_Radial_K3 queryIntrinsics(vecImageGray[i].Width(), vecImageGray[i].Height());  //TODO : Change for different camera type
+        //Set with UI
+        vecQueryHasIntrinsics[i] = getInputIntrinsics(args.time, input, queryIntrinsics);
+        
+        vecQueryIntrinsics[i] = queryIntrinsics;
+        vecQueryImageSize[i] = std::make_pair<std::size_t, std::size_t>(vecImageGray[i].Width(), vecImageGray[i].Height());
       }
-
+      
+      
+      if(abort())
+      {
+        return;
+      }
+      
+      //Extract features
+      _processData.extractFeatures(vecImageGray, vecQueryRegions);
+      
+      
+      if(abort())
+      {
+        return;
+      }
+      
+      //Localization Process
       if(isRigInInput())
       {
+        std::cout << "render : [localization] RIG mode" << std::endl;
         openMVG::geometry::Pose3 mainCameraPose;
 
-        localized = _processData.localizeRig(vecImageGray,
+        localized = _processData.localizeRig(vecQueryRegions,
+                                vecQueryImageSize,
                                 vecQueryIntrinsics,
-                                vecSubPoses,
-                                mainCameraPose);
-        
-        if(localized)
-        {
-          //TODO : add transformation for other camera of the rig
-          setPoseToParamsAtTime(
-                   mainCameraPose,
-                   args.time,
-                   _cameraOutputTranslate[outputIndex],
-                   _cameraOutputRotate[outputIndex],
-                   _cameraOutputScale[outputIndex]);
-        }
-        intrinsics = vecQueryIntrinsics[outputIndex];
+                                vecQuerySubPoses,
+                                mainCameraPose,
+                                vecLocResults);
       }
       else
       {
-        const openMVG::image::Image<unsigned char>& imageGray = vecImageGray.front();
-        const std::pair<std::size_t, std::size_t> queryImageSize(std::make_pair(imageGray.Width(), imageGray.Height()));
-        std::unique_ptr<openMVG::features::Regions> queryRegions;
-
-        if(abort())
-        {
-          return;
-        }
-
-        _processData.extractFeatures(imageGray, queryRegions);
+        std::cout << "render : [localization] Simple mode" << std::endl;
+        localized = _processData.localize(vecQueryRegions.front(),
+                              vecQueryImageSize.front(),
+                              vecQueryHasIntrinsics.front(),
+                              vecQueryIntrinsics.front(),
+                              vecLocResults.front());
+      }
+      
+      if(abort())
+      {
+        return;
+      }
+      
+      //Create frame temp cache structure
+      std::map<std::size_t, FrameData> frameDataCache; 
+      std::cout << "render : [write] nb locResults : " << vecLocResults.size() << std::endl;
+      
+      for(unsigned int output = 0; output < getNbConnectedInput(); ++output)
+      {
+        std::cout << "render : [write] start for output  : " << output << std::endl;
+        unsigned int clipIndex = _connectedClipIdx[output];
         
-        
-        if(abort())
+        std::cout << "render : [write] cache for output  : " << output << std::endl;
+        //Update frame temp cache
+        frameDataCache[clipIndex].extractedFeatures = dynamic_cast<const openMVG::features::SIFT_Regions*>(vecQueryRegions[output].get())->Features();
+        frameDataCache[clipIndex].localizationResult = vecLocResults[output];
+        frameDataCache[clipIndex].undistortedPt2D = vecLocResults[output].retrieveUndistortedPt2D();
+         
+        if(vecLocResults[output].isValid())
         {
-          return;
-        }
-
-        localized = _processData.localize(queryRegions,
-                                          queryImageSize,
-                                          vecHasIntrinsics.front(),
-                                          vecQueryIntrinsics.front(),
-                                          localizationResult);
-                                
-        if(localized)
-        {
+          std::cout << "render : [write] setPoseToParamsAtTime for output : " << output << std::endl;
           //Update output parameters
           setPoseToParamsAtTime(
-                  localizationResult.getPose(),
+                  vecLocResults[output].getPose(),
                   args.time,
-                  _cameraOutputTranslate[outputIndex],
-                  _cameraOutputRotate[outputIndex],
-                  _cameraOutputScale[outputIndex]);
+                  _cameraOutputTranslate[clipIndex],
+                  _cameraOutputRotate[clipIndex],
+                  _cameraOutputScale[clipIndex]);
 
+          std::cout << "render : [write] setIntrinsicsToParamsAtTime for output : " << output << std::endl;
           setIntrinsicsToParamsAtTime(
-                  localizationResult.getIntrinsics(),
+                  vecLocResults[output].getIntrinsics(),
                   args.time,
-                  _inputSensorWidth[outputIndex]->getValue(),
-                  _cameraOutputFocalLength[outputIndex],
-                  _cameraOutputOpticalCenter[outputIndex]);
+                  _inputSensorWidth[clipIndex]->getValue(),
+                  _cameraOutputFocalLength[clipIndex],
+                  _cameraOutputOpticalCenter[clipIndex]);
 
+          std::cout << "render : [write] setStatToParamsAtTime for output : " << output << std::endl;
           setStatToParamsAtTime(
-                  localizationResult,
-                  _framesData[args.time].extractedFeatures, //read only
+                  vecLocResults[output],
+                  frameDataCache[clipIndex].extractedFeatures, //read only
                   args.time,
-                  _outputStatErrorMean[outputIndex],
-                  _outputStatErrorMin[outputIndex],
-                  _outputStatErrorMax[outputIndex],
-                  _outputStatNbMatchedImages[outputIndex],
-                  _outputStatNbDetectedFeatures[outputIndex],
-                  _outputStatNbMatchedFeatures[outputIndex],
-                  _outputStatNbInlierFeatures[outputIndex]);
+                  _outputStatErrorMean[clipIndex],
+                  _outputStatErrorMin[clipIndex],
+                  _outputStatErrorMax[clipIndex],
+                  _outputStatNbMatchedImages[clipIndex],
+                  _outputStatNbDetectedFeatures[clipIndex],
+                  _outputStatNbMatchedFeatures[clipIndex],
+                  _outputStatNbInlierFeatures[clipIndex]);
+
+          std::cout << "render : [write] intrinsics output for output : " << output << std::endl;
           
           //Update intrinsics
-          intrinsics = localizationResult.getIntrinsics();
-          
+          vecIntrinsics[output] = vecLocResults[output].getIntrinsics();
         }
-        
-
-
-        {
-          FrameData dataCache; 
-          dataCache.localized = localized;
-          dataCache.extractedFeatures = dynamic_cast<const openMVG::features::SIFT_Regions*>(queryRegions.get())->Features();
-          
-          if(localized)
-          {
-            dataCache.localizationResult = localizationResult;
-            dataCache.undistortedPt2D = localizationResult.retrieveUndistortedPt2D();
-          }
-          
-          if(hasFrameDataCache(args.time))
-          {
-            // Lock before updating the existing frame data
-            std::lock_guard<std::mutex> guard(_framesData[args.time].mutex);
-            _framesData[args.time] = dataCache;
-          }
-          else
-          {
-            // Create a new cache at this time
-            _framesData[args.time] = dataCache;
-          }
-          
-          /*
-          //need to implement serialize functions
-          std::ostringstream dataSerialized;
-          cereal::JSONOutputArchive archive(dataSerialized);
-          bool arr[] = {true, false};
-          archive( CEREAL_NVP(dataCache), arr );
-            _serializedResults->setValueAtTime(args.time, dataSerialized.str());
-           */
-        }
-
-        
       }
-
-      if(!localized)
+      
+      std::cout << "render : [cache] update with frame temp cache " << std::endl;
+      //Update cache with frame temp cache
       {
-        clearOutputParamValuesAtTime(args.time);
+        if(hasFrameDataCache(args.time))
+        {
+          //Lock before updating the existing frame data
+          for(auto &outputDataCache : frameDataCache)
+          {
+            std::lock_guard<std::mutex> guard(_framesData[args.time][outputDataCache.first].mutex);
+             _framesData[args.time][outputDataCache.first] = outputDataCache.second;
+          }
+        }
+        else
+        {
+          //Create a new cache at this time
+          _framesData[args.time] = frameDataCache;
+        }
       }
     }
-
-  } 
-  catch(std::exception& e)
+  }
+  catch(std::exception &e)
   {
     this->sendMessage(OFX::Message::eMessageError, "cameralocalization.render", e.what());
   }
   
-  std::cout << "render : redraw overlays "  << std::endl;
+  std::cout << "render : [overlay] redraw"  << std::endl;
   
   this->redrawOverlays();
 
-  std::cout << "render : fetch output "  << std::endl;
-
+  std::cout << "render : [output clip] fetch"  << std::endl;
   OFX::Image *outputPtr = _dstClip->fetchImage(args.time);
   if(outputPtr == NULL)
   {
-    std::cout << "Output image is NULL" << std::endl;
+    std::cout << "render : [output clip] is NULL" << std::endl;
     return;
   }
 
   Common::Image<float> outputImage(outputPtr, Common::eOrientationTopDown);
-  if(localized)
+
+  // TODO: always undistort (fill vecIntrinsics from params)
+  if(vecLocResults[outputClipIndex].isValid())
   {
     openMVG::image::Image<unsigned char> undistortedImage;
-    openMVG::cameras::UndistortImage(vecImageGray[outputIndex], &intrinsics, undistortedImage);
+    std::cout << "render : [output clip] compute undistorted "  << std::endl;
+    openMVG::cameras::UndistortImage(vecImageGray[outputDataIndex], &vecIntrinsics[outputClipIndex], undistortedImage);
+    std::cout << "render : [output clip] convert and copy "  << std::endl;
     convertGRAY8ToRGB32(undistortedImage, outputImage);
   }
   else
   {
-    convertGRAY8ToRGB32(vecImageGray[outputIndex], outputImage);
+    std::cout << "render : [output clip] no calibration "  << std::endl;
+    convertGRAY8ToRGB32(vecImageGray[outputDataIndex], outputImage);
   }
 
   if(_alwaysComputeFrame->getValue())
@@ -444,6 +470,12 @@ bool CameraLocalizerPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX
 
 void CameraLocalizerPlugin::changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName)
 {
+  std::cout << "----------" << std::endl;
+  std::cout << "changedClip: " << clipName << std::endl;
+  std::cout << "  args.reason: " << int(args.reason) << std::endl;
+  std::cout << "  args.time: " << args.time << std::endl;
+  std::cout << "----------" << std::endl;
+  
   //a clip have been changed by the user or the plugin
   if(args.reason != OFX::InstanceChangeReason::eChangeTime)
   {
@@ -465,29 +497,7 @@ void CameraLocalizerPlugin::changedParam(const OFX::InstanceChangedArgs &args, c
   if((paramName == kParamOutputIndex) && (args.reason == OFX::InstanceChangeReason::eChangeUserEdit))
   {
     OFX::ImageEffectHostDescription* desc = OFX::getImageEffectHostDescription();
-    std::ostringstream description;
-    description << "hostName: " << desc->hostName << std::endl;
-    description << "hostLabel: " << desc->hostLabel << std::endl;
-    description << "hostIsBackground: " << desc->hostIsBackground << std::endl;
-    description << "supportsOverlays: " << desc->supportsOverlays << std::endl;
-    description << "supportsMultiResolution: " << desc->supportsMultiResolution << std::endl;
-    description << "supportsTiles: " << desc->supportsTiles << std::endl;
-    description << "temporalClipAccess: " << desc->temporalClipAccess << std::endl;
-    description << "supportsMultipleClipDepths: " << desc->supportsMultipleClipDepths << std::endl;
-    description << "supportsMultipleClipPARs: " << desc->supportsMultipleClipPARs << std::endl;
-    description << "supportsSetableFrameRate: " << desc->supportsSetableFrameRate << std::endl;
-    description << "supportsSetableFielding: " << desc->supportsSetableFielding << std::endl;
-    description << "supportsStringAnimation: " << desc->supportsStringAnimation << std::endl;
-    description << "supportsCustomInteract: " << desc->supportsCustomInteract << std::endl;
-    description << "supportsChoiceAnimation: " << desc->supportsChoiceAnimation << std::endl;
-    description << "supportsBooleanAnimation: " << desc->supportsBooleanAnimation << std::endl;
-    description << "supportsCustomAnimation: " << desc->supportsCustomAnimation << std::endl;
-    description << "maxParameters: " << desc->maxParameters << std::endl;
-    description << "maxPages: " << desc->maxPages << std::endl;
-    description << "pageRowCount: " << desc->pageRowCount << std::endl;
-    description << "pageColumnCount: " << desc->pageColumnCount << std::endl;
-    std::cout << description.str() << std::endl;
-    
+   
     if(!_srcClip[_cameraOutputIndex->getValue() - 1]->isConnected())
     {
       int min;
@@ -569,7 +579,7 @@ void CameraLocalizerPlugin::changedParam(const OFX::InstanceChangedArgs &args, c
     updateTrackingRangeMode();
     return;
   }
-  
+
   //Tracking button
   if(paramName == kParamTrackingTrack)
   {

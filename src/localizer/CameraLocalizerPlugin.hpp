@@ -131,7 +131,7 @@ private:
   std::vector<OFX::ValueParam*> _outputParams;
 
   //Cache
-  std::map<OfxTime, FrameData> _framesData;
+  std::map<OfxTime, std::map<std::size_t, FrameData> > _framesData;
 
 public:
   
@@ -145,6 +145,8 @@ public:
    * @brief Update if needed the localizer param data structure
    */
   void parametersSetup();
+
+  bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
 
   /**
    * @brief client begin sequence render function
@@ -253,6 +255,12 @@ public:
     return _connectedClipIdx.size();
   }
   
+  std::size_t getDataIndexFromClipIndex(std::size_t inputIndex) const
+  {
+    auto it = find(_connectedClipIdx.begin(), _connectedClipIdx.end(), inputIndex);
+    return std::distance(_connectedClipIdx.begin(), it);
+  }
+  
   int getOverlayTracksWindowSize() const
   {
     return _overlayTracksWindowSize->getValue();
@@ -263,9 +271,14 @@ public:
     return _overlayFeaturesScaleOrientationRadius->getValue();
   }
   
-  const FrameData& getFrameDataCache(OfxTime time) const
+  const std::map<std::size_t, FrameData> &getFrameDataCache(OfxTime time) const
   {
     return _framesData.at(time);
+  }
+  
+  const FrameData& getOutputFrameDataCache(OfxTime time) const
+  {
+    return _framesData.at(time).at(_cameraOutputIndex->getValue() - 1);
   }
   
   const openMVG::sfm::SfM_Data& getLocalizerSfMData() const

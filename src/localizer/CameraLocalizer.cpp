@@ -9,24 +9,29 @@ namespace openMVG_ofx {
 namespace Localizer {
 
 void LocalizerProcessData::extractFeatures(
-    const openMVG::image::Image<unsigned char> &imageGray,
-    std::unique_ptr<openMVG::features::Regions>& outQueryRegions) const
+      const std::vector< openMVG::image::Image<unsigned char> > &vecImageGray,
+      std::vector< std::unique_ptr<openMVG::features::Regions> > &vecQueryRegions) const
 {
-  // outQueryRegions.reset(new openMVG::features::SIFT_Regions());
-
-  auto detect_start = std::chrono::steady_clock::now();
-
   openMVG::features::SIFT_Image_describer imageDescriber;
   imageDescriber.Set_configuration_preset(param->_featurePreset);
-  imageDescriber.Describe(imageGray, outQueryRegions, nullptr);
+    
+  for(unsigned int i = 0; i < vecImageGray.size(); ++i)
+  {
+    std::cout << "[features]\tExtract SIFT : input " << i << std::endl;
+    // outQueryRegions.reset(new openMVG::features::SIFT_Regions());
+    auto detect_start = std::chrono::steady_clock::now();
+    
+    imageDescriber.Describe(vecImageGray[i], vecQueryRegions[i], nullptr);
+    
+    auto detect_end = std::chrono::steady_clock::now();
+    auto detect_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(detect_end - detect_start);
+    std::cout << "[features]\tExtract SIFT done: found " << vecQueryRegions[i]->RegionCount() << " features in " << detect_elapsed.count() << " [ms]" << std::endl;
 
-  auto detect_end = std::chrono::steady_clock::now();
-  auto detect_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(detect_end - detect_start);
-  std::cout << "[features]\tExtract SIFT done: found " << outQueryRegions->RegionCount() << " features in " << detect_elapsed.count() << " [ms]" << std::endl;
+  }
 }
 
-bool LocalizerProcessData::localize(std::unique_ptr<openMVG::features::Regions>& queryRegions,
-                                    const std::pair<std::size_t, std::size_t>& queryImageSize,
+bool LocalizerProcessData::localize(std::unique_ptr<openMVG::features::Regions> &queryRegions,
+                                    const std::pair<std::size_t, std::size_t> &queryImageSize,
                                     bool hasIntrinsics,
                                     openMVG::cameras::Pinhole_Intrinsic_Radial_K3 &queryIntrinsics,
                                     openMVG::localization::LocalizationResult &localizationResult)
@@ -40,16 +45,21 @@ bool LocalizerProcessData::localize(std::unique_ptr<openMVG::features::Regions>&
                   "");
 }
                                     
-bool LocalizerProcessData::localizeRig(const std::vector<openMVG::image::Image<unsigned char> > & vec_imageGray,
-                                        std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3 > &vec_queryIntrinsics,
-                                        const std::vector<openMVG::geometry::Pose3 > &vec_subPoses,
-                                        openMVG::geometry::Pose3 rigPose)
+bool LocalizerProcessData::localizeRig(const std::vector<std::unique_ptr<openMVG::features::Regions> > &vecQueryRegions,
+                                        const std::vector<std::pair<std::size_t, std::size_t> > &vecQueryImageSize,
+                                        std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3 > &vecQueryIntrinsics,
+                                        const std::vector<openMVG::geometry::Pose3 > &vecQuerySubPoses,
+                                        openMVG::geometry::Pose3 &rigPose,
+                                        std::vector<openMVG::localization::LocalizationResult> &vecLocResults)
 {
-  return localizer->localizeRig(vec_imageGray,
-                                      this->param.get(),
-                                      vec_queryIntrinsics,
-                                      vec_subPoses,
-                                      rigPose);
+  
+  return localizer->localizeRig(vecQueryRegions,
+                                vecQueryImageSize,
+                                this->param.get(),
+                                vecQueryIntrinsics,
+                                vecQuerySubPoses,
+                                rigPose,
+                                vecLocResults);
 }
 
   
@@ -124,7 +134,7 @@ std::size_t getParamInputId(const std::string& paramName)
 }
 
 void setPoseToParamsAtTime(
-    const openMVG::geometry::Pose3 & pose,
+    const openMVG::geometry::Pose3 &pose,
     const double time,
     OFX::Double3DParam *cameraOutputTranslate,
     OFX::Double3DParam *cameraOutputRotate,
@@ -155,7 +165,7 @@ void setPoseToParamsAtTime(
 }
 
 void setIntrinsicsToParamsAtTime(
-    const openMVG::cameras::Pinhole_Intrinsic& intrinsics,
+    const openMVG::cameras::Pinhole_Intrinsic &intrinsics,
     const double time,
     const double sensorWidth,
     OFX::DoubleParam *cameraOutputFocalLength,
@@ -172,7 +182,7 @@ void setIntrinsicsToParamsAtTime(
 
 void setStatToParamsAtTime(
     const openMVG::localization::LocalizationResult &localizationResult,
-    const std::vector<openMVG::features::SIOPointFeature>& features,
+    const std::vector<openMVG::features::SIOPointFeature> &features,
     const double time,
     OFX::DoubleParam *outputStatErrorMean,
     OFX::DoubleParam *outputStatErrorMin,
@@ -182,20 +192,25 @@ void setStatToParamsAtTime(
     OFX::DoubleParam *outputStatNbMatchedFeatures,
     OFX::DoubleParam *outputStatNbInlierFeatures)
 {
-    const openMVG::Mat2X residuals = localizationResult.computeResiduals();
+  //Error statistics only available if the localizationResult has inliers
+  if(localizationResult.getInliers().size() > 0)
+  {
+    const openMVG::Mat2X residuals = localizationResult.computeInliersResiduals();
 
     const auto sqrErrors = (residuals.cwiseProduct(residuals)).colwise().sum();
-    
+
     outputStatErrorMean->setValueAtTime(time, std::sqrt(sqrErrors.mean()));
     outputStatErrorMin->setValueAtTime(time, std::sqrt(sqrErrors.minCoeff()));
     outputStatErrorMax->setValueAtTime(time, std::sqrt(sqrErrors.maxCoeff()));
-    outputStatNbMatchedImages->setValueAtTime(time, localizationResult.getMatchedImages().size());
-    outputStatNbDetectedFeatures->setValueAtTime(time, features.size());
-    outputStatNbMatchedFeatures->setValueAtTime(time, localizationResult.getIndMatch3D2D().size());
-    outputStatNbInlierFeatures->setValueAtTime(time, localizationResult.getInliers().size());
+  }
+
+  outputStatNbMatchedImages->setValueAtTime(time, localizationResult.getMatchedImages().size());
+  outputStatNbDetectedFeatures->setValueAtTime(time, features.size());
+  outputStatNbMatchedFeatures->setValueAtTime(time, localizationResult.getIndMatch3D2D().size());
+  outputStatNbInlierFeatures->setValueAtTime(time, localizationResult.getInliers().size());
 }
 
-void convertRGB32ToGRAY8(const Common::Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage)
+void convertRGB32ToGRAY8(const Common::Image<float> &inputImage, openMVG::image::Image<unsigned char> &outputImage)
 {
   for(unsigned int y = 0; y < outputImage.Height(); ++y)
   {
@@ -208,7 +223,7 @@ void convertRGB32ToGRAY8(const Common::Image<float>& inputImage, openMVG::image:
   }
 }
 
-void convertGGG32ToGRAY8(const Common::Image<float>& inputImage, openMVG::image::Image<unsigned char> &outputImage)
+void convertGGG32ToGRAY8(const Common::Image<float> &inputImage, openMVG::image::Image<unsigned char> &outputImage)
 {
   for(unsigned int y = 0; y < outputImage.Height(); ++y)
   {

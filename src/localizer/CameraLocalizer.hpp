@@ -22,20 +22,32 @@ namespace Localizer {
 //FrameData structure for cache result
 struct FrameData
 {
-  bool localized;
   openMVG::localization::LocalizationResult localizationResult;
   std::vector<openMVG::features::SIOPointFeature> extractedFeatures;
   openMVG::Mat undistortedPt2D;
   mutable std::mutex mutex;
+  
+  FrameData()
+  {}
+  
+  /**
+   * @brief Copy constructor
+   * @param other
+   */
+  FrameData(const FrameData &other)
+  {
+    localizationResult = other.localizationResult;
+    extractedFeatures = other.extractedFeatures;
+    undistortedPt2D = other.undistortedPt2D;
+  }
   
   /**
    * @brief Assignment copy operator
    * @param other
    * @return 
    */
-  FrameData& operator=(FrameData const &other) 
+  FrameData& operator=(const FrameData &other) 
   {
-    localized = other.localized;
     localizationResult = other.localizationResult;
     extractedFeatures = other.extractedFeatures;
     undistortedPt2D = other.undistortedPt2D;
@@ -43,6 +55,12 @@ struct FrameData
     
     return *this;
   }
+  
+  bool isLocalized() const
+  {
+    return localizationResult.isValid();
+  }
+  
 };
 
 
@@ -52,11 +70,10 @@ struct LocalizerProcessData
   std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3> queryIntrinsics;
   std::unique_ptr<openMVG::localization::LocalizerParameters> param;
   std::unique_ptr<openMVG::localization::ILocalizer> localizer;
-  // rig::Rig rig;
   
   void extractFeatures(
-      const openMVG::image::Image<unsigned char> &imageGray,
-      std::unique_ptr<openMVG::features::Regions>& outQueryRegions) const;
+      const std::vector< openMVG::image::Image<unsigned char> > &vecImageGray,
+      std::vector< std::unique_ptr<openMVG::features::Regions> > &vecQueryRegions) const;
 
   bool localize(std::unique_ptr<openMVG::features::Regions>& queryRegions,
                 const std::pair<std::size_t, std::size_t>& queryImageSize,
@@ -64,10 +81,12 @@ struct LocalizerProcessData
                 openMVG::cameras::Pinhole_Intrinsic_Radial_K3 &queryIntrinsics,
                 openMVG::localization::LocalizationResult &localizationResult);
 
-  bool localizeRig(const std::vector<openMVG::image::Image<unsigned char> > & vec_imageGray,
-                    std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3 > &vec_queryIntrinsics,
-                    const std::vector<openMVG::geometry::Pose3 > &vec_subPoses,
-                    openMVG::geometry::Pose3 rigPose);
+  bool localizeRig(const std::vector<std::unique_ptr<openMVG::features::Regions> > &vecQueryRegions,
+                                        const std::vector<std::pair<std::size_t, std::size_t> > &vecQueryImageSize,
+                                        std::vector<openMVG::cameras::Pinhole_Intrinsic_Radial_K3 > &vecQueryIntrinsics,
+                                        const std::vector<openMVG::geometry::Pose3 > &vecQuerySubPoses,
+                                        openMVG::geometry::Pose3 &rigPose,
+                                        std::vector<openMVG::localization::LocalizationResult> &vecLocResults);
   
   /**
    * @brief get openMVG features preset enum from Plugin display choice enum
