@@ -504,12 +504,6 @@ void CameraLocalizerPlugin::changedParam(const OFX::InstanceChangedArgs &args, c
     return;
   }
   
-  //Want save Rig Calibration
-  if(paramName == kParamRigCalibrationWantSave)
-  {
-    _rigCalibrationSavePath->setIsSecret(!_rigCalibrationWantSave->getValue());
-  }
-  
   //Rig calibration
   if(paramName == kParamRigCalibration)
   {
@@ -518,9 +512,16 @@ void CameraLocalizerPlugin::changedParam(const OFX::InstanceChangedArgs &args, c
   }
   
   //Load Rig calibration
-  if(paramName == kParamRigCalibrationFile)
+  if(paramName == kParamRigCalibrationLoad)
   {
     loadRigCalibration(_rigCalibrationFile->getValue());
+    return;
+  }
+  
+  //Save Rig calibration
+  if(paramName == kParamRigCalibrationSave)
+  {
+    saveRigCalibration(_rigCalibrationFile->getValue());
     return;
   }
 
@@ -615,6 +616,7 @@ void CameraLocalizerPlugin::calibrateRig()
   //Collect cache data per camera
   for(auto &framesDataAtTime : _framesData)
   {
+    assert(getNbConnectedInput() == framesDataAtTime.second.size());
     for(std::size_t cameraIndex = 0; cameraIndex < framesDataAtTime.second.size(); ++cameraIndex)
     {
       auto &cameraFrameDataAtTime = framesDataAtTime.second[cameraIndex];
@@ -633,7 +635,7 @@ void CameraLocalizerPlugin::calibrateRig()
 
   if(!rigCalibration.initializeCalibration())
   {
-    sendMessage(OFX::Message::eMessageWarning, "rig.calibration.process",
+    sendMessage(OFX::Message::eMessageError, "rig.calibration.process",
         "Unable to find a proper initialization for the relative poses for Rig calibration  ! Aborting...");
     return;
   }
@@ -648,11 +650,11 @@ void CameraLocalizerPlugin::calibrateRig()
   {
     std::cout << "rig calibration : [write] clear cache" << std::endl;
 
-    //clear all keys
+    // Clear all keys, as they contain localization of each camera independently without RIG constraint (which is the input of the rig calibration).
     clearOutputParamValues();
     invalidRender();
 
-    //update subposes
+    // Update cameras subposes with RIG calibration results
     const std::vector<openMVG::geometry::Pose3>& subposes = rigCalibration.getRelativePoses();
 
     for(std::size_t pose = 0; pose < subposes.size(); ++pose)
@@ -669,28 +671,9 @@ void CameraLocalizerPlugin::calibrateRig()
       _inputRelativePoseRotateM3[input]->setValue(rotate(2,0), rotate(2,1), rotate(2,2));
       _inputRelativePoseCenter[input]->setValue(center(0), center(1), center(2));
     }
-
-    // save the rig calibration (subposes)
-    if(_rigCalibrationWantSave->getValue())
-    {
-      std::cout << "rig calibration : [write] save calibration file" << std::endl;
-      std::string filePath = _rigCalibrationSavePath->getValue();
-      if(rigCalibration.saveCalibration(filePath))
-      {
-        sendMessage(OFX::Message::eMessageMessage, "rig.calibration.process",
-            "Rig calibration succeed ! Relative Poses have been update, calibration file save : " + filePath);
-      }
-      else
-      {
-        sendMessage(OFX::Message::eMessageWarning, "rig.calibration.process",
-            "Rig calibration succeed but can't write calibration file : " + filePath);
-      }
-    }
-    else
-    {
-      sendMessage(OFX::Message::eMessageMessage, "rig.calibration.process",
-          "Rig calibration succeed ! Relative Poses have been update.");
-    }
+    
+    sendMessage(OFX::Message::eMessageMessage, "rig.calibration.process",
+        "Rig calibration succeed ! Relative Poses have been update.");
 
     _rigMode->setValue((int)EParamRigMode::eParamRigModeKnown);
   }
@@ -705,36 +688,63 @@ void CameraLocalizerPlugin::loadRigCalibration(const std::string &filePath)
   {
     sendMessage(OFX::Message::eMessageWarning, "rig.subpose.file",
             "The number of cameras in the RIG file contains more cameras than the plugin supports.");
-    return;
   }
   else if(subposes.size() != (getNbConnectedInput() - 1))
   {
     sendMessage(OFX::Message::eMessageWarning, "rig.subpose.file",
             "The number of cameras in the RIG file does not match the number of connected input clips.");
-    return;
   }
+  
+  //Reset all relative poses to 0
+  clearAllRelativePoses();
 
   const std::size_t nbSubPoses = std::min(subposes.size(), std::size_t(K_MAX_INPUTS - 1));
 
-  for(std::size_t i = 0; i < nbSubPoses; ++i)
+  for(std::size_t input = 0; input < nbSubPoses; ++input)
   {
-    std::size_t input = _connectedClipIdx[i + 1];
+    std::size_t clipIndex = _connectedClipIdx[input + 1];
 
-    if(input == 0) //Don't set the main camera
+    if(clipIndex == 0) //Don't set the main camera
     {
       continue;
     }
 
-    const auto rotate = subposes[i].rotation();
-    const auto center = subposes[i].center();
+    const auto rotate = subposes[input].rotation();
+    const auto center = subposes[input].center();
 
-    _inputRelativePoseRotateM1[input]->setValue(rotate(0,0), rotate(0,1), rotate(0,2));
-    _inputRelativePoseRotateM2[input]->setValue(rotate(1,0), rotate(1,1), rotate(1,2));
-    _inputRelativePoseRotateM3[input]->setValue(rotate(2,0), rotate(2,1), rotate(2,2));
-    _inputRelativePoseCenter[input]->setValue(center(0), center(1), center(2));
+    _inputRelativePoseRotateM1[clipIndex]->setValue(rotate(0,0), rotate(0,1), rotate(0,2));
+    _inputRelativePoseRotateM2[clipIndex]->setValue(rotate(1,0), rotate(1,1), rotate(1,2));
+    _inputRelativePoseRotateM3[clipIndex]->setValue(rotate(2,0), rotate(2,1), rotate(2,2));
+    _inputRelativePoseCenter[clipIndex]->setValue(center(0), center(1), center(2));
   }
 }
+
+void CameraLocalizerPlugin::saveRigCalibration(const std::string &filePath)
+{
+  std::vector<openMVG::geometry::Pose3> subposes(getNbConnectedInput() - 1);
   
+  for(std::size_t input = 1; input < getNbConnectedInput(); ++input) //Don't set the main camera
+  {
+    auto &rotate = subposes[input - 1].rotation();
+    auto &center = subposes[input - 1].center();
+
+    _inputRelativePoseRotateM1[input]->getValue(rotate(0,0), rotate(0,1), rotate(0,2));
+    _inputRelativePoseRotateM2[input]->getValue(rotate(1,0), rotate(1,1), rotate(1,2));
+    _inputRelativePoseRotateM3[input]->getValue(rotate(2,0), rotate(2,1), rotate(2,2));
+    _inputRelativePoseCenter[input]->getValue(center(0), center(1), center(2));
+  }
+  if(openMVG::rig::saveRigCalibration(filePath, subposes))
+  {
+    sendMessage(OFX::Message::eMessageMessage, "rig.calibration.save",
+            "Rig calibration saved in : " + filePath);
+  }
+  else
+  {
+    sendMessage(OFX::Message::eMessageWarning, "rig.calibration.save",
+            "Can't save Rig Calibration in : " + filePath);
+  }
+}
+
 void CameraLocalizerPlugin::reset()
 {
   std::cout << "reset : [parameters] update" << std::endl;
@@ -758,24 +768,43 @@ void CameraLocalizerPlugin::reset()
   _trackingButton->setEnabled(hasInput());
   
   //Reset plugin cache
-  if(_serializedResults->getValue().size() > 0)
+  if(!_serializedResults->getValue().empty())
   {
     std::size_t nbFrameInCache = 0; //Only for prints
     std::cout << "reset : [cache] load serialized data" << std::endl;
-    std::istringstream serializedData(_serializedResults->getValue());
-    cereal::XMLInputArchive archive(serializedData);
-    archive(_framesData);
-    for(auto &framesDataAtTime : _framesData)
+    try
     {
-      for(auto &cameraframeDataAtTime : framesDataAtTime.second)
+      std::istringstream serializedData(_serializedResults->getValue());
+      cereal::XMLInputArchive archive(serializedData);
+      archive(_framesData);
+      for(auto &framesDataAtTime : _framesData)
       {
-        ++nbFrameInCache;
-        cameraframeDataAtTime.second.undistortedPt2D = cameraframeDataAtTime.second.localizationResult.retrieveUndistortedPt2D();
+        for(auto &cameraframeDataAtTime : framesDataAtTime.second)
+        {
+          ++nbFrameInCache;
+          cameraframeDataAtTime.second.undistortedPt2D = cameraframeDataAtTime.second.localizationResult.retrieveUndistortedPt2D();
+        }
       }
+      std::cout << "reset : [cache] " << nbFrameInCache << " frames loaded in cache from serialized data" << std::endl;
     }
-    std::cout << "reset : [cache] " << nbFrameInCache << " frames loaded in cache from serialized data" << std::endl;
+    catch(std::exception &e)
+    {
+      this->sendMessage(OFX::Message::eMessageWarning, "cameralocalization.reset.serializedresults", "Can't load serialized results : " + std::string(e.what()));
+    }
+
   }
 }
+
+ void CameraLocalizerPlugin::clearAllRelativePoses()
+ {
+  for(std::size_t i = 0; i < K_MAX_INPUTS; ++i)
+  {
+    _inputRelativePoseRotateM1[i]->setValue(0, 0, 0);
+    _inputRelativePoseRotateM2[i]->setValue(0, 0, 0);
+    _inputRelativePoseRotateM3[i]->setValue(0, 0, 0);
+    _inputRelativePoseCenter[i]->setValue(0, 0, 0);
+  }
+ }
 
 void CameraLocalizerPlugin::serializeCacheData()
 {
@@ -834,20 +863,14 @@ void CameraLocalizerPlugin::updateRigOptions()
   {
     unknown = isRigModeUnknown();
     _rigMode->setIsSecret(false);
-    _rigCalibrationWantSave->setIsSecret(!unknown);
-    _rigCalibrationSavePath->setIsSecret(!unknown);
-    if(unknown)
-    {
-      _rigCalibrationSavePath->setIsSecret(!_rigCalibrationWantSave->getValue());
-    }
   }
   else
   {
     _rigMode->setIsSecret(true);
-    _rigCalibrationWantSave->setIsSecret(true);
-    _rigCalibrationSavePath->setIsSecret(true);
   }
   
+  _rigCalibrationLoad->setIsSecret(unknown);
+  _rigCalibrationSave->setIsSecret(unknown);
   _rigCalibrationFile->setIsSecret(unknown);
   _rigCalibration->setIsSecret(!unknown);
   

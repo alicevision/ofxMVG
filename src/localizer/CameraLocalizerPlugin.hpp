@@ -51,9 +51,9 @@ private:
   OFX::StringParam *_voctreeFile = fetchStringParam(kParamVoctreeFile);
   OFX::ChoiceParam *_rigMode = fetchChoiceParam(kParamRigMode);
   OFX::PushButtonParam *_rigCalibration = fetchPushButtonParam(kParamRigCalibration);
-  OFX::BooleanParam *_rigCalibrationWantSave = fetchBooleanParam(kParamRigCalibrationWantSave);
-  OFX::StringParam *_rigCalibrationSavePath = fetchStringParam(kParamRigCalibrationSave);
   OFX::StringParam *_rigCalibrationFile = fetchStringParam(kParamRigCalibrationFile);
+  OFX::PushButtonParam *_rigCalibrationLoad = fetchPushButtonParam(kParamRigCalibrationLoad);
+  OFX::PushButtonParam *_rigCalibrationSave = fetchPushButtonParam(kParamRigCalibrationSave);
   
   //Advanced Parameters
   OFX::BooleanParam *_overlayDetectedFeatures = fetchBooleanParam(kParamAdvancedOverlayDetectedFeatures);
@@ -210,9 +210,20 @@ public:
   void loadRigCalibration(const std::string &filePath);
   
   /**
+   * @brief Save Rig Calibration From a file
+   * @param[in] filePath
+   */
+  void saveRigCalibration(const std::string &filePath);
+  
+  /**
    * @brief Reset all plugin parameters
    */
   void reset();
+  
+  /**
+   * @brief Clear relative poses for each input
+   */
+  void clearAllRelativePoses();
   
   /**
    * @brief serialize cache data

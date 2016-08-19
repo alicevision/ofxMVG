@@ -21,9 +21,9 @@
 #define kParamVoctreeFile "voctreeFile"
 #define kParamRigMode "rigMode"
 #define kParamRigCalibration "rigCalibration"
-#define kParamRigCalibrationWantSave "rigCalibrationWantSave"
-#define kParamRigCalibrationSave "rigCalibrationSave"
 #define kParamRigCalibrationFile "rigCalibrationFile"
+#define kParamRigCalibrationLoad "rigCalibrationLoad"
+#define kParamRigCalibrationSave "rigCalibrationSave"
 
 
 //Input Parameters
