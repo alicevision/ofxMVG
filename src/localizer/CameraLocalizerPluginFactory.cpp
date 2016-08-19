@@ -209,6 +209,14 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setStringType(OFX::eStringTypeDirectoryPath);
         param->setParent(*groupInput);
       }
+      
+      {
+        OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamInputImportLensCalibration(input));
+        param->setLabel("Calibrate Lens with the selected node");
+        param->setHint("Select the corresponding LensCalibration node and press this button to initialize camera intrinsics parameters.");
+        param->setEnabled(true);
+        param->setParent(*groupInput);
+      }
 
       //Lens calibration Group
       {
@@ -983,6 +991,15 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamCacheClear);
       param->setLabel("Clear All");
       param->setHint("Clear all output values and cache");
+      param->setEnabled(true);
+      param->setParent(*groupOutput);
+      param->setLayoutHint(OFX::eLayoutHintDivider);
+    }
+
+    {
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamCreateScene);
+      param->setLabel("Create 3D Scene");
+      param->setHint("Build the 3D scene from data");
       param->setEnabled(true);
       param->setParent(*groupOutput);
     }
