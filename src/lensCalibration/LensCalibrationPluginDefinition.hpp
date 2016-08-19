@@ -10,12 +10,17 @@
 //Calibration parameters
 #define kParamGroupCalibration "groupCalibration"
 
+#define kParamNbCheckersDetected "NbCheckersDetected"
+#define kParamIsCalibrated "IsCalibrated"
 #define kParamInputImageIsGray "inputImageIsGray"
 #define kParamImageSize "imageSize"
 #define kParamPatternType "patternType"
 #define kParamPatternSize "patternSize"
 #define kParamSquareSize "SquareSize"
 #define kParamNbRadialCoef "nbRadialCoef"
+
+#define kParamGroupCalibrationAdvanced "groupAdvanced"
+
 #define kParamMaxFrames "maxFrames"
 #define kParamMaxCalibFrames "maxCalibFrames"
 #define kParamCalibGridSize "calibGridSize"
@@ -34,8 +39,8 @@
 #define kParamGroupOutput "groupOutput"
 
 #define kParamOutputAvgReprojErr "outputAvgReprojErr"
-#define kParamOutputIsCalibrated "outputIsCalibrated"
-#define kParamOutputClear "outputClear"
+#define kParamOutputClearCalibration "outputClearCalibration"
+#define kParamOutputClearAll "outputClearAll"
 
 #define kParamOutputCameraGroup "groupCamera"
 
@@ -57,7 +62,7 @@
 namespace openMVG_ofx {
 namespace LensCalibration {
 
-//kParamPatternType options
+//EParamPatternType options
 enum EParamPatternType
 {
   eParamPatternTypeChessboard = 0,

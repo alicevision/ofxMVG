@@ -23,8 +23,10 @@ private:
   OFX::Clip *_dstClip = fetchClip(kOfxImageEffectOutputClipName); //Destination clip
   
   //Calibration parameters
-  OFX::Int2DParam *_inputImageSize = fetchInt2DParam(kParamImageSize);
+  OFX::IntParam *_outputNbCheckersDetected = fetchIntParam(kParamNbCheckersDetected);
+  OFX::BooleanParam *_outputIsCalibrated = fetchBooleanParam(kParamIsCalibrated);
   OFX::BooleanParam *_inputImageIsGray = fetchBooleanParam(kParamInputImageIsGray);
+  OFX::Int2DParam *_inputImageSize = fetchInt2DParam(kParamImageSize);
   OFX::ChoiceParam *_inputPatternType = fetchChoiceParam(kParamPatternType);
   OFX::Int2DParam *_inputPatternSize = fetchInt2DParam(kParamPatternSize);
   OFX::DoubleParam *_inputSquareSize = fetchDoubleParam(kParamSquareSize);
@@ -34,10 +36,8 @@ private:
   OFX::IntParam *_inputCalibGridSize = fetchIntParam(kParamCalibGridSize);
   OFX::IntParam *_inputMinInputFrames = fetchIntParam(kParamMinInputFrames);
   OFX::DoubleParam *_inputMaxTotalAvgErr = fetchDoubleParam(kParamMaxTotalAvgErr);
-  OFX::PushButtonParam *_outputCalibrate = fetchPushButtonParam(kParamCalibrate);
 
   //Output parameters
-  OFX::BooleanParam *_outputIsCalibrated = fetchBooleanParam(kParamOutputIsCalibrated);
   OFX::DoubleParam *_outputAvgReprojErr = fetchDoubleParam(kParamOutputAvgReprojErr);
   OFX::DoubleParam *_outputCameraFocalLenght = fetchDoubleParam(kParamOutputFocalLenght);
   OFX::Double2DParam *_outputCameraPrincipalPointOffset = fetchDouble2DParam(kParamOutputPrincipalPointOffset);
@@ -47,18 +47,14 @@ private:
   OFX::DoubleParam *_outputLensDistortionRadialCoef3 = fetchDoubleParam(kParamOutputRadialCoef3);
   OFX::DoubleParam *_outputLensDistortionTangentialCoef1 = fetchDoubleParam(kParamOutputTangentialCoef1);
   OFX::DoubleParam *_outputLensDistortionTangentialCoef2 = fetchDoubleParam(kParamOutputTangentialCoef2);
-  OFX::PushButtonParam *_outputClear = fetchPushButtonParam(kParamOutputClear);
 
   //Debug parameters
   OFX::BooleanParam *_debugEnable = fetchBooleanParam(kParamDebugEnable);
   OFX::StringParam *_debugRejectedImgFolder = fetchStringParam(kParamDebugRejectedImgFolder);
   OFX::StringParam *_debugSelectedImgFolder = fetchStringParam(kParamDebugSelectedImgFolder);
-
-  //Output Parameters List
-  std::vector<OFX::ValueParam*> _outputParams;
   
   // Cache
-  std::map<OfxTime, std::vector<cv::Point2f> > checkerPerFrame;
+  std::map<OfxTime, std::vector<cv::Point2f> > _checkerPerFrame;
 
 public:
   
@@ -113,13 +109,25 @@ public:
   virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
   
 private:
+  /**
+   * 
+   */
   void calibrateLens();
   
-  void clearOutputParamValues()
-  {
-    for(OFX::ValueParam* outputParam: _outputParams)
-      outputParam->deleteAllKeys();
-  }
+  /**
+   * 
+   */
+  void clearAllData();
+  /**
+   * 
+   */
+  void clearCalibration();
+  
+  /**
+   * 
+   */
+  void clearOutputParamValues();
+
 };
 
 
