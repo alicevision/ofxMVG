@@ -60,7 +60,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(false);
     srcClip->setIsMask(false);
-    srcClip->setOptional(input > 0);
+    srcClip->setOptional(true);
   }
 
   //Output clip
@@ -136,6 +136,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       if(voctreeFilepath)
         param->setDefault(voctreeFilepath);
       param->setParent(*groupMain);
+      param->setLayoutHint(OFX::eLayoutHintDivider);
     }
 
     {
@@ -146,6 +147,13 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setDefault(eParamRigModeUnKnown);
       param->setParent(*groupMain);
     }
+    
+    {
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamRigCalibration);
+      param->setLabel("Calibrate");
+      param->setHint("Calibrate RIG with computed keyframes");
+      param->setParent(*groupMain);
+    }
 
     {
       OFX::StringParamDescriptor *param = desc.defineStringParam(kParamRigCalibrationFile);
@@ -154,7 +162,21 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setStringType(OFX::eStringTypeFilePath);
       param->setFilePathExists(true);
       param->setParent(*groupMain);
-      param->setLayoutHint(OFX::eLayoutHintDivider);
+    }
+    
+    {
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamRigCalibrationLoad);
+      param->setLabel("Load Rig Calibration");
+      param->setHint("Load Rig calibration from file");
+      param->setParent(*groupMain);
+      param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+    }
+    
+    {
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamRigCalibrationSave);
+      param->setLabel("Save Rig Calibration");
+      param->setHint("Save Rig calibration on file");
+      param->setParent(*groupMain); 
     }
 
     //Inputs Tabs
@@ -180,6 +202,15 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setLabel("Lens Calibration File");
         param->setHint("Calibration file to initialize camera intrinsics parameters.");
         param->setStringType(OFX::eStringTypeDirectoryPath);
+        param->setParent(*groupInput);
+      }
+      
+      {
+        OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamInputImportLensCalibration(input));
+        param->setLabel("Calibrate Lens with the selected node");
+        param->setHint("Select the corresponding LensCalibration node and press this button to initialize camera intrinsics parameters.");
+        param->setIsSecret(true);
+        param->setEnabled(false);
         param->setParent(*groupInput);
       }
 
@@ -939,7 +970,8 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputCreateCamera(input));
         param->setLabel("Create Camera");
         param->setHint("Create a linked Nuke camera");
-        param->setEnabled(true);
+        param->setIsSecret(true);
+        param->setEnabled(false);
         param->setParent(*groupOutputCamera);
       }
     }
@@ -957,6 +989,16 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setLabel("Clear All");
       param->setHint("Clear all output values and cache");
       param->setEnabled(true);
+      param->setParent(*groupOutput);
+      param->setLayoutHint(OFX::eLayoutHintDivider);
+    }
+
+    {
+      OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamCreateScene);
+      param->setLabel("Create 3D Scene");
+      param->setHint("Build the 3D scene from data");
+      param->setIsSecret(true);
+      param->setEnabled(false);
       param->setParent(*groupOutput);
     }
   }
