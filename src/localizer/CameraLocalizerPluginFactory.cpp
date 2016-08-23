@@ -209,7 +209,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamInputImportLensCalibration(input));
         param->setLabel("Calibrate Lens with the selected node");
         param->setHint("Select the corresponding LensCalibration node and press this button to initialize camera intrinsics parameters.");
-        param->setIsSecret(true);
+        param->setIsSecret(false);
         param->setEnabled(false);
         param->setParent(*groupInput);
       }
@@ -970,7 +970,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputCreateCamera(input));
         param->setLabel("Create Camera");
         param->setHint("Create a linked Nuke camera");
-        param->setIsSecret(true);
+        param->setIsSecret(false);
         param->setEnabled(false);
         param->setParent(*groupOutputCamera);
       }
@@ -997,7 +997,7 @@ void CameraLocalizerPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamCreateScene);
       param->setLabel("Create 3D Scene");
       param->setHint("Build the 3D scene from data");
-      param->setIsSecret(true);
+      param->setIsSecret(false);
       param->setEnabled(false);
       param->setParent(*groupOutput);
     }
