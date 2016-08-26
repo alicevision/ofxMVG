@@ -100,8 +100,6 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
   }
   else
   {
-    bool found = false;
-    
     // Detect checkerboard for calibration
     if(_checkerPerFrame.count(args.time) == 0) // if not already extracted
     {
@@ -139,9 +137,17 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
 
       // Store the checker points of the found pattern
       std::vector<cv::Point2f> checkerPoints;
-      found = openMVG::calibration::findPattern(patternType, cvInputGrayImage, boardSize, checkerPoints);
+      const int found = openMVG::calibration::findPattern(patternType, cvInputGrayImage, boardSize, checkerPoints);
       if(found)
+      {
         _checkerPerFrame[args.time] = checkerPoints;
+        std::cout << "Checker found at time " << args.time << "." << std::endl;
+      }
+      else
+        std::cout << "Checker NOT found at time " << args.time << "." << std::endl;
+        
+      std::cout << "checkerPerFrame.size(): " << _checkerPerFrame.size() << std::endl;
+      std::cout << "checkerPerFrame.at(time).size(): " << _checkerPerFrame.at(args.time).size() << std::endl;
     }
 
     OFX::Image *outputPtr = _dstClip->fetchImage(args.time);
@@ -154,13 +160,6 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
     Common::Image<float> outputImage(outputPtr, Common::eOrientationTopDown);
     outputImage.copyFrom(inputImageOFX);
 
-    if(found)
-      std::cout << "Checker found at time " << args.time << "." << std::endl;
-    else
-      std::cout << "Checker NOT found at time " << args.time << "." << std::endl;
-
-    std::cout << "checkerPerFrame.size(): " << _checkerPerFrame.size() << std::endl;
-    std::cout << "checkerPerFrame.at(time).size(): " << _checkerPerFrame.at(args.time).size() << std::endl;
   }
 }
 
