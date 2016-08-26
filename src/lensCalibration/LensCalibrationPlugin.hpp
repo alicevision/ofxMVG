@@ -109,21 +109,22 @@ public:
   
 private:
   /**
-   * 
+   * @brief Calibrate lens distortion
    */
   void calibrateLens();
   
   /**
-   * 
+   * @brief Clear the calibration parameters and the group of images used for the calibration
    */
   void clearAllData();
+  
   /**
-   * 
+   * @brief Clear only the calibration parameters
    */
   void clearCalibration();
   
   /**
-   * 
+   * @brief Clear all the output calibration parameters
    */
   void clearOutputParamValues();
 
