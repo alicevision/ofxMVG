@@ -266,7 +266,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputRadialCoef1);
         param->setLabel("Radial Coef1");
-        param->setDisplayRange(0, 10);
+        param->setDisplayRange(-2, 2);
         param->setEvaluateOnChange(false);
         param->setEnabled(false);
         param->setAnimates(false);
@@ -276,7 +276,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputRadialCoef2);
         param->setLabel("Radial Coef2");
-        param->setDisplayRange(0, 10);
+        param->setDisplayRange(-2, 2);
         param->setEvaluateOnChange(false);
         param->setEnabled(false);
         param->setAnimates(false);
@@ -286,7 +286,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputRadialCoef3);
         param->setLabel("Radial Coef3");
-        param->setDisplayRange(0, 10);
+        param->setDisplayRange(-2, 2);
         param->setEvaluateOnChange(false);
         param->setEnabled(false);
         param->setAnimates(false);
@@ -297,7 +297,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputTangentialCoef1);
         param->setLabel("Tangential Coef1");
-        param->setDisplayRange(0, 10);
+        param->setDisplayRange(-2, 2);
         param->setEvaluateOnChange(false);
         param->setEnabled(false);
         param->setAnimates(false);
@@ -308,7 +308,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputTangentialCoef2);
         param->setLabel("Tangential Coef2");
-        param->setDisplayRange(0, 10);
+        param->setDisplayRange(-2, 2);
         param->setEvaluateOnChange(false);
         param->setEnabled(false);
         param->setAnimates(false);
