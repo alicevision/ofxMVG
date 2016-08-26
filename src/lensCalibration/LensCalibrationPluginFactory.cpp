@@ -160,17 +160,6 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       }
 
       {
-        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamMaxFrames);
-        param->setLabel("Max Frames");
-        param->setHint("Maximal number of frames to extract from the video file.");
-        param->setRange(0, kOfxFlagInfiniteMax);
-        param->setDisplayRange(0, 1000);
-        param->setDefault(0);
-        param->setAnimates(false);
-        param->setParent(*groupAdvanced);
-      }
-
-      {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamMaxCalibFrames);
         param->setLabel("Max Calibration Frames");
         param->setHint("Maximal number of frames to use to calibrate from the selected frames.");

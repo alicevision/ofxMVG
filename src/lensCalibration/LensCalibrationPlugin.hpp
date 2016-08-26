@@ -31,7 +31,6 @@ private:
   OFX::Int2DParam *_inputPatternSize = fetchInt2DParam(kParamPatternSize);
   OFX::DoubleParam *_inputSquareSize = fetchDoubleParam(kParamSquareSize);
   OFX::IntParam *_inputNbRadialCoef = fetchIntParam(kParamNbRadialCoef);
-  OFX::IntParam *_inputMaxFrames = fetchIntParam(kParamMaxFrames);
   OFX::IntParam *_inputMaxCalibFrames = fetchIntParam(kParamMaxCalibFrames);
   OFX::IntParam *_inputCalibGridSize = fetchIntParam(kParamCalibGridSize);
   OFX::IntParam *_inputMinInputFrames = fetchIntParam(kParamMinInputFrames);

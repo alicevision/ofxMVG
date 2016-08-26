@@ -21,7 +21,6 @@
 
 #define kParamGroupCalibrationAdvanced "groupAdvanced"
 
-#define kParamMaxFrames "maxFrames"
 #define kParamMaxCalibFrames "maxCalibFrames"
 #define kParamCalibGridSize "calibGridSize"
 #define kParamMinInputFrames "minInputFrames"
