@@ -44,7 +44,7 @@ void convertGGG32ToGRAY8(const Common::Image<float>& inputImage, cv::Mat& output
  * @param[in] pattern
  * @return 
  */
-openMVG::patternDetect::Pattern getPatternType(EParamPatternType pattern);
+openMVG::calibration::Pattern getPatternType(EParamPatternType pattern);
 
 /**
  * @brief Set intrinsic values and distortion coefficients into OFX parameters

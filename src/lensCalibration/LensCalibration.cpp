@@ -70,15 +70,15 @@ void convertGGG32ToGRAY8(const Common::Image<float>& inputImage, cv::Mat& output
   }
 }
 
-openMVG::patternDetect::Pattern getPatternType(EParamPatternType pattern)
+openMVG::calibration::Pattern getPatternType(EParamPatternType pattern)
 {
   switch(pattern)
   {
-    case eParamPatternTypeChessboard : return openMVG::patternDetect::CHESSBOARD; break;
-    case eParamPatternTypeCirclesGrid : return openMVG::patternDetect::CIRCLES_GRID; break;
-    case eParamPatternTypeAsymmetricCirclesGrid : return openMVG::patternDetect::ASYMMETRIC_CIRCLES_GRID; break;
+    case eParamPatternTypeChessboard : return openMVG::calibration::CHESSBOARD; break;
+    case eParamPatternTypeCirclesGrid : return openMVG::calibration::CIRCLES_GRID; break;
+    case eParamPatternTypeAsymmetricCirclesGrid : return openMVG::calibration::ASYMMETRIC_CIRCLES_GRID; break;
 #ifdef HAVE_CCTAG
-    case eParamPatternTypeCCTagGrid : return openMVG::patternDetect::CCTAG_GRID; break;
+    case eParamPatternTypeCCTagGrid : return openMVG::calibration::CCTAG_GRID; break;
 #endif
     default : throw std::invalid_argument("Unrecognized Pattern Type : " + std::to_string(pattern));
   }

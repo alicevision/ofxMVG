@@ -137,10 +137,10 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
       std::cout << "inputPatternSize: " << boardSize.width << ", " << boardSize.height << std::endl;
       EParamPatternType inputPatternType = EParamPatternType(_inputPatternType->getValue());
       std::cout << "inputPatternType: " << int(inputPatternType) << std::endl;
-      openMVG::patternDetect::Pattern patternType = getPatternType(inputPatternType);
+      openMVG::calibration::Pattern patternType = getPatternType(inputPatternType);
       std::cout << "patternType openMVG: " << int(patternType) << std::endl;
       std::vector<cv::Point2f> checkerPoints;
-      found = openMVG::patternDetect::findPattern(patternType, cvInputGrayImage, boardSize, checkerPoints);
+      found = openMVG::calibration::findPattern(patternType, cvInputGrayImage, boardSize, checkerPoints);
       if(found)
         checkerPerFrame[args.time] = checkerPoints;
     }
@@ -172,7 +172,7 @@ void LensCalibrationPlugin::calibrateLens()
   OfxPointI p(_inputPatternSize->getValue());
   cv::Size boardSize(p.x, p.y);
   EParamPatternType inputPatternType = EParamPatternType(_inputPatternType->getValue());
-  openMVG::patternDetect::Pattern patternType = getPatternType(inputPatternType);
+  openMVG::calibration::Pattern patternType = getPatternType(inputPatternType);
   
   std::vector<std::size_t> remainingImagesIndexes(checkerPerFrame.size());
   std::vector<float> calibImageScore;
@@ -190,11 +190,11 @@ void LensCalibrationPlugin::calibrateLens()
     imagePoints.push_back(it->second);
   }
   
-  openMVG::bestImages::selectBestImages(imagePoints, imageSize, remainingImagesIndexes, _inputMaxCalibFrames->getValue(),
+  openMVG::calibration::selectBestImages(imagePoints, imageSize, remainingImagesIndexes, _inputMaxCalibFrames->getValue(),
                                         validFrames, calibImageScore, calibInputFrames, calibImagePoints, _inputCalibGridSize->getValue());
   
   std::vector<std::vector<cv::Point3f> > calibObjectPoints;
-  openMVG::patternDetect::computeObjectPoints(boardSize, patternType, _inputSquareSize->getValue(), calibImagePoints, calibObjectPoints);
+  openMVG::calibration::computeObjectPoints(boardSize, patternType, _inputSquareSize->getValue(), calibImagePoints, calibObjectPoints);
 
   int cvCalibFlags = 0;
   double totalAvgErr = 0;
