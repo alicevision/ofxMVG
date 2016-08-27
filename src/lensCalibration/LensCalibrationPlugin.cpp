@@ -111,7 +111,7 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
       std::cout << "Detect checkerboard for calibration at frame " << args.time << std::endl;
       std::cout << "checkerPerFrame.size(): " << checkerPerFrame.size() << std::endl;
       OfxPointI imageSizeParamValue(_inputImageSize->getValue());
-      OfxPointI imageSizeMVG{inputImageOFX.getWidth(), inputImageOFX.getHeight()};
+      OfxPointI imageSizeMVG{static_cast<int>(inputImageOFX.getWidth()), static_cast<int>(inputImageOFX.getHeight())};
       if(checkerPerFrame.empty())
         // If no checkerboard collected, initialize with the current image size
         _inputImageSize->setValue(inputImageOFX.getWidth(), inputImageOFX.getHeight());
