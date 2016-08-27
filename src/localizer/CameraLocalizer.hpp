@@ -5,6 +5,9 @@
 
 #include <openMVG/localization/ILocalizer.hpp>
 #include <openMVG/localization/VoctreeLocalizer.hpp>
+
+#include <openMVG/robust_estimation/robust_estimators.hpp>
+
 #if HAVE_CCTAG
 #include <openMVG/localization/CCTagLocalizer.hpp>
 #endif
