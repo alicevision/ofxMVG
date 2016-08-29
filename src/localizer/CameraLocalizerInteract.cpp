@@ -5,6 +5,7 @@
 #include "../common/stb_easy_font.h"
 
 #include <cmath>
+#include <array>
 
 namespace openMVG_ofx {
 namespace Localizer {

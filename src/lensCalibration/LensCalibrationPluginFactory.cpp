@@ -1,4 +1,3 @@
-#pragma once
 #include "LensCalibrationPluginFactory.hpp"
 #include "LensCalibrationPluginDefinition.hpp"
 #include "LensCalibrationInteract.hpp"

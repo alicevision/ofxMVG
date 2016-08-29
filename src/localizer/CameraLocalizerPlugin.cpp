@@ -560,7 +560,7 @@ void CameraLocalizerPlugin::changedParam(const OFX::InstanceChangedArgs &args, c
   //Input Parameter
   std::size_t input = getParamInputId(paramName);
   
-  if((input >= 0) && (input < K_MAX_INPUTS))
+  if(input < K_MAX_INPUTS)
   {
     if(paramName == kParamInputDistortion(input))
     {
