@@ -13,6 +13,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 
 #include <map>
+#include <array>
 #include <vector>
 #include <stdio.h>
 #include <cassert>
@@ -106,6 +107,7 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
       std::cout << "Detect checkerboard for calibration at frame " << args.time << std::endl;
       std::cout << "checkerPerFrame.size(): " << _checkerPerFrame.size() << std::endl;
       OfxPointI imageSizeParamValue(_inputImageSize->getValue());
+
       OfxPointI imageSizeMVG{inputImageOFX.getWidth(), inputImageOFX.getHeight()};
 
       if(_checkerPerFrame.empty())
@@ -138,6 +140,7 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
       // Store the checker points of the found pattern
       std::vector<cv::Point2f> checkerPoints;
       const int found = openMVG::calibration::findPattern(patternType, cvInputGrayImage, boardSize, checkerPoints);
+
       if(found)
       {
         _checkerPerFrame[args.time] = checkerPoints;

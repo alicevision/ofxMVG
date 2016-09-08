@@ -5,6 +5,9 @@
 
 #include <openMVG/localization/ILocalizer.hpp>
 #include <openMVG/localization/VoctreeLocalizer.hpp>
+
+#include <openMVG/robust_estimation/robust_estimators.hpp>
+
 #if HAVE_CCTAG
 #include <openMVG/localization/CCTagLocalizer.hpp>
 #endif
@@ -32,7 +35,7 @@ struct FrameData
   
   /**
    * @brief Copy constructor
-   * @param other
+   * @param[in] other
    */
   FrameData(const FrameData &other)
   {
@@ -43,7 +46,7 @@ struct FrameData
   
   /**
    * @brief Assignment copy operator
-   * @param other
+   * @param[in] other
    * @return 
    */
   FrameData& operator=(const FrameData &other) 
@@ -54,6 +57,12 @@ struct FrameData
     //the mutex can't be copied
     
     return *this;
+  }
+  
+  template<class Archive>
+  void serialize(Archive & archive)
+  {
+    archive( localizationResult, extractedFeatures ); 
   }
   
   bool isLocalized() const
@@ -72,7 +81,7 @@ struct LocalizerProcessData
   std::unique_ptr<openMVG::localization::ILocalizer> localizer;
   
   void extractFeatures(
-      const std::vector< openMVG::image::Image<unsigned char> > &vecImageGray,
+      const std::map< std::size_t, openMVG::image::Image<unsigned char> > &mapImageGray,
       std::vector< std::unique_ptr<openMVG::features::Regions> > &vecQueryRegions) const;
 
   bool localize(std::unique_ptr<openMVG::features::Regions>& queryRegions,

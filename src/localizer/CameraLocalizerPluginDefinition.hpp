@@ -20,7 +20,10 @@
 #define kParamDescriptorsFolder "descriptorsFolder"
 #define kParamVoctreeFile "voctreeFile"
 #define kParamRigMode "rigMode"
+#define kParamRigCalibration "rigCalibration"
 #define kParamRigCalibrationFile "rigCalibrationFile"
+#define kParamRigCalibrationLoad "rigCalibrationLoad"
+#define kParamRigCalibrationSave "rigCalibrationSave"
 
 
 //Input Parameters
@@ -28,6 +31,7 @@
 
 #define kParamInputIsGrayscale(I) "inputIsGrayscale_" + std::to_string(I)
 #define kParamInputLensCalibrationFile(I) "inputLensCalibrationFile_" + std::to_string(I)
+#define kParamInputImportLensCalibration(I) "inputImportLensCalibration_" + std::to_string(I) //script button
 
 #define kParamInputGroupLensCalibration(I) "groupInputLensCalibration_" + std::to_string(I)
 
@@ -116,7 +120,7 @@
 #define kParamOutputDistortionCoef2(I) "outputDistortionCoef2_" + std::to_string(I)
 #define kParamOutputDistortionCoef3(I) "outputDistortionCoef3_" + std::to_string(I)
 #define kParamOutputDistortionCoef4(I) "outputDistortionCoef4_" + std::to_string(I)
-#define kParamOutputCreateCamera(I) "outputCreateCamera_" + std::to_string(I)
+#define kParamOutputCreateCamera(I) "outputCreateCamera_" + std::to_string(I) //script button
 
 #define kParamOutputStatGroup(I) "groupOutputStat_" + std::to_string(I)
 
@@ -132,6 +136,11 @@
 #define kParamCacheSerializedResults "cacheSerializedResults"
 #define kParamCacheClear "cacheClear"
 #define kParamCacheClearCurrentFrame "cacheClearCurrentFrame"
+
+
+//Script Parameters
+#define kParamCreateScene "createScene" //script button
+
 
 //Invalidation Parameters
 #define kParamForceInvalidation "forceInvalidation"

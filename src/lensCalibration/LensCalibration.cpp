@@ -78,7 +78,7 @@ openMVG::calibration::Pattern getPatternType(EParamPatternType pattern)
     case eParamPatternTypeCirclesGrid : return openMVG::calibration::CIRCLES_GRID; break;
     case eParamPatternTypeAsymmetricCirclesGrid : return openMVG::calibration::ASYMMETRIC_CIRCLES_GRID; break;
 #ifdef HAVE_CCTAG
-  case eParamPatternTypeCCTagGrid : return openMVG::calibration::CCTAG_GRID; break;
+    case eParamPatternTypeCCTagGrid : return openMVG::calibration::CCTAG_GRID; break;
 #endif
     default : throw std::invalid_argument("Unrecognized Pattern Type : " + std::to_string(pattern));
   }
