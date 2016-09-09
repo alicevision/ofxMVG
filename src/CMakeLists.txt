@@ -12,6 +12,8 @@ target_include_directories(mvg
     ${OPENMVG_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
+    ${CCTAG_INCLUDE_DIRS}
+    ${TBB_INCLUDE_DIRS}
   )
 if(CMAKE_COMPILER_IS_GNUCXX)
   set_property(TARGET mvg PROPERTY LINK_FLAGS "-Wl,--no-undefined") 
