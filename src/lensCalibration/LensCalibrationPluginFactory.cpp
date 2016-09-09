@@ -56,18 +56,18 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
   srcClip->setSupportsTiles(false);
   srcClip->setIsMask(false);
   srcClip->setOptional(false);
-  
+
   //Output clip
   OFX::ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
   dstClip->addSupportedComponent(OFX::ePixelComponentRGBA);
   dstClip->setSupportsTiles(false);
-  
+
   //Calibration Group
   {
     OFX::GroupParamDescriptor *groupCalibration = desc.defineGroupParam(kParamGroupCalibration);
     groupCalibration->setLabel("Calibration");
     groupCalibration->setAsTab();
-    
+
     {
       OFX::IntParamDescriptor *param = desc.defineIntParam(kParamNbCheckersDetected);
       param->setLabel("Nb Checkers Detected");
@@ -76,11 +76,12 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setDefault(0);
       param->setAnimates(false);
       param->setEvaluateOnChange(false);
+      param->setCanUndo(false);
       param->setEnabled(false);
       param->setParent(*groupCalibration);
       param->setLayoutHint(OFX::eLayoutHintDivider);
     }
-    
+
     {
       OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamIsCalibrated);
       param->setLabel("Is calibrated");
@@ -97,7 +98,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setHint("Input image is gray");
       param->setParent(*groupCalibration);
     }
-    
+
     {
       OFX::Int2DParamDescriptor *param = desc.defineInt2DParam(kParamImageSize);
       param->setLabel("Image Size");
@@ -129,7 +130,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setAnimates(false);
       param->setParent(*groupCalibration);
     }
-    
+
     {
       OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSquareSize);
       param->setLabel("Square Size");
@@ -146,7 +147,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       groupAdvanced->setLabel("Advanced Parameters");
       groupAdvanced->setParent(*groupCalibration);
       groupAdvanced->setOpen(false);
-      
+
       {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamNbRadialCoef);
         param->setLabel("Nb Radial Coef");
@@ -203,7 +204,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setLayoutHint(OFX::eLayoutHintDivider);
       }
     }
-    
+
     {
       OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamCalibrate);
       param->setLabel("Calibrate");
@@ -218,7 +219,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     OFX::GroupParamDescriptor *groupOutput = desc.defineGroupParam(kParamGroupOutput);
     groupOutput->setLabel("Output");
     groupOutput->setAsTab();
-    
+
     {
       OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputAvgReprojErr);
       param->setLabel("Average Reprojection Error");
@@ -229,7 +230,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setParent(*groupOutput);
       param->setLayoutHint(OFX::eLayoutHintDivider);
     }
-    
+
     {
       OFX::GroupParamDescriptor *groupCamera = desc.defineGroupParam(kParamOutputCameraGroup);
       groupCamera->setLabel("Intrinsics Camera Parameters");
@@ -255,13 +256,13 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setParent(*groupCamera);
       }
     }
-    
+
     {    
       OFX::GroupParamDescriptor *groupLensDistortion = desc.defineGroupParam(kParamOutputLensDistortionGroup);
       groupLensDistortion->setLabel("Lens Distortion Coefficients");
       groupLensDistortion->setParent(*groupOutput);
       groupLensDistortion->setOpen(true);
-        
+
       {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOutputRadialCoef1);
         param->setLabel("Radial Coef1");
@@ -315,7 +316,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setParent(*groupLensDistortion);
       }
     }
-    
+
     {
       OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputClearCalibration);
       param->setLabel("Clear Calibration");
@@ -323,7 +324,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setEnabled(true);
       param->setParent(*groupOutput);
     }
-    
+
     {
       OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamOutputClearAll);
       param->setLabel("Clear All");
@@ -332,7 +333,7 @@ void LensCalibrationPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
       param->setParent(*groupOutput);
     }
   }
-  
+
   //Debug Group
   {
     OFX::GroupParamDescriptor *groupDebug = desc.defineGroupParam(kParamGroupDebug);

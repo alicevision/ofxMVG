@@ -20,6 +20,11 @@
 #include <iostream>
 #include <algorithm>
 #include <stdexcept>
+#include <bits/stl_vector.h>
+
+#ifdef HAVE_CCTAG
+#include <cctag/utils/LogTime.hpp>
+#endif
 
 namespace openMVG_ofx {
 namespace LensCalibration {
@@ -66,7 +71,8 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
     return;
   }
   const Common::Image<float> inputImageOFX(inputPtr, Common::eOrientationTopDown);
-
+  _inputImageSize->setValue(inputImageOFX.getWidth(), inputImageOFX.getHeight());
+  
   if(_outputIsCalibrated->getValue())
   {
     OfxPointD principalPoint = _outputCameraPrincipalPointOffset->getValue();
@@ -105,7 +111,6 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
     if(_checkerPerFrame.count(args.time) == 0) // if not already extracted
     {
       std::cout << "Detect checkerboard for calibration at frame " << args.time << std::endl;
-      std::cout << "checkerPerFrame.size(): " << _checkerPerFrame.size() << std::endl;
       OfxPointI imageSizeParamValue(_inputImageSize->getValue());
 
       OfxPointI imageSizeMVG{inputImageOFX.getWidth(), inputImageOFX.getHeight()};
@@ -136,21 +141,81 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
       cv::Size boardSize(p.x, p.y);
       EParamPatternType inputPatternType = EParamPatternType(_inputPatternType->getValue());
       openMVG::calibration::Pattern patternType = getPatternType(inputPatternType);
+      std::cout << "Pattern Type : " << getPatternType(inputPatternType) << std::endl;
 
       // Store the checker points of the found pattern
       std::vector<cv::Point2f> checkerPoints;
-      const int found = openMVG::calibration::findPattern(patternType, cvInputGrayImage, boardSize, checkerPoints);
+      std::vector<int> detectedId;
+
+      int found = false;
+      if(patternType == openMVG::calibration::ASYMMETRIC_CCTAG_GRID)
+      {
+#ifdef HAVE_CCTAG
+          std::clock_t startCh = std::clock();
+          const std::size_t nRings = 3;
+          const int pipeId = 0;
+          const std::size_t frame = 1;
+          cctag::Parameters cctagParams(nRings);
+          boost::ptr_list<cctag::ICCTag> cctags;
+          cctag::logtime::Mgmt durations( 25 );
+
+          cctag::cctagDetection(cctags, pipeId, frame, cvInputGrayImage, cctagParams, &durations);
+
+          boost::ptr_list<cctag::ICCTag>::iterator iterCCTags = cctags.begin();
+          for(; iterCCTags != cctags.end(); iterCCTags++)
+          {
+            // Ignore CCTags without identification
+            if(iterCCTags->id() < 0)
+              continue;
+            
+            // Store detected Id
+            detectedId.push_back(iterCCTags->id());
+
+            // Store pixel coordinates of detected markers
+            cv::Point2f detectedPoint((float) iterCCTags->x(), (float) iterCCTags->y());
+            checkerPoints.push_back(detectedPoint);
+          }
+          assert(detectedId.size() == checkerPoints.size());
+          found = true;
+
+          double durationCh = (std::clock() - startCh) / (double) CLOCKS_PER_SEC;
+          std::cout << "Find asymmetric CCTag grid duration: " << durationCh << std::endl;
+          
+          if(found)
+          {
+            _cctagsPerFrame[args.time] = cctags;
+          }
+#endif
+      }
+      else
+      {
+        found = openMVG::calibration::findPattern(patternType, cvInputGrayImage, boardSize, detectedId, checkerPoints);
+      }
 
       if(found)
       {
-        _checkerPerFrame[args.time] = checkerPoints;
+        _checkerPerFrame[args.time]._detectedPoints = checkerPoints;
+        _checkerPerFrame[args.time]._pointsId = detectedId;
+
+        // Number of checkerboard detected
+        if(OFX::getImageEffectHostDescription()->hostName == "uk.co.thefoundry.nuke")
+        {
+          // Only animated parameters are updated in Nuke UI
+          _outputNbCheckersDetected->deleteAllKeys();
+          _outputNbCheckersDetected->setValueAtTime(args.time, _checkerPerFrame.size());
+        }
+        else
+        {
+          _outputNbCheckersDetected->setValue(_checkerPerFrame.size());
+        }
+
         std::cout << "Checker found at time " << args.time << "." << std::endl;
       }
       else
         std::cout << "Checker NOT found at time " << args.time << "." << std::endl;
-        
+
       std::cout << "checkerPerFrame.size(): " << _checkerPerFrame.size() << std::endl;
-      std::cout << "checkerPerFrame.at(time).size(): " << _checkerPerFrame.at(args.time).size() << std::endl;
+      std::cout << "checkerPerFrame.at(time).size(): " << _checkerPerFrame.at(args.time)._detectedPoints.size() << std::endl;
     }
 
     OFX::Image *outputPtr = _dstClip->fetchImage(args.time);
@@ -162,7 +227,6 @@ void LensCalibrationPlugin::render(const OFX::RenderArguments &args)
 
     Common::Image<float> outputImage(outputPtr, Common::eOrientationTopDown);
     outputImage.copyFrom(inputImageOFX);
-
   }
 }
 
@@ -174,29 +238,27 @@ void LensCalibrationPlugin::calibrateLens()
   OfxPointI p(_inputPatternSize->getValue());
   cv::Size boardSize(p.x, p.y);
 
-  std::vector<std::size_t> remainingImagesIndexes(_checkerPerFrame.size());
+  OfxPointI imageSizeValue(_inputImageSize->getValue());
+  cv::Size imageSize(imageSizeValue.x, imageSizeValue.y);
+
+  // Fill validFrames vector with the id of the detected checkers and imagePoints vector with the checker points vectors
+  std::vector<std::size_t> validFrames;
+  std::vector<std::vector<cv::Point2f> > imagePoints;
+  for (std::map<OfxTime, CheckerPoints>::iterator it = _checkerPerFrame.begin(); it != _checkerPerFrame.end(); ++it)
+  {
+    validFrames.push_back(it->first);
+    imagePoints.push_back(it->second._detectedPoints);
+  }
+
   std::vector<float> calibImageScore;
   std::vector<std::size_t> calibInputFrames;
   std::vector<std::vector<cv::Point2f> > calibImagePoints;
-  std::vector<long unsigned int> validFrames;
-  std::vector<std::vector<cv::Point2f> > imagePoints;
-  
-  // Set the number of detected checkers
-  _outputNbCheckersDetected->setValue(remainingImagesIndexes.size());
-
-  OfxPointI imageSizeValue(_inputImageSize->getValue());
-  cv::Size imageSize(imageSizeValue.x, imageSizeValue.y);
-  
-  // Fill validFrames vector with the id of the detected checkers and imagePoints vector with the checker points vectors
-  for (std::map<OfxTime, std::vector<cv::Point2f> >::iterator it = _checkerPerFrame.begin(); it != _checkerPerFrame.end(); ++it)
-  {
-    validFrames.push_back(it->first);
-    imagePoints.push_back(it->second);
-  }
-  
+  std::vector<std::size_t> remainingImagesIndexes(imagePoints.size());
   // Select only the best images for the calibration among the valid frames
-  openMVG::calibration::selectBestImages(imagePoints, imageSize, remainingImagesIndexes, _inputMaxCalibFrames->getValue(),
-                                        validFrames, calibImageScore, calibInputFrames, calibImagePoints, _inputCalibGridSize->getValue());
+  openMVG::calibration::selectBestImages(
+      imagePoints, imageSize, _inputMaxCalibFrames->getValue(), validFrames,
+      _inputCalibGridSize->getValue(), calibImageScore,
+      calibInputFrames, calibImagePoints, remainingImagesIndexes);
 
   // Get openMVG pattern type enum from Plugin display choice enum
   EParamPatternType inputPatternType = EParamPatternType(_inputPatternType->getValue());
@@ -204,7 +266,24 @@ void LensCalibrationPlugin::calibrateLens()
 
   // Create an object which stores all the checker points of the images
   std::vector<std::vector<cv::Point3f> > calibObjectPoints;
-  openMVG::calibration::computeObjectPoints(boardSize, patternType, _inputSquareSize->getValue(), calibImagePoints, calibObjectPoints);
+  {
+    std::vector<cv::Point3f> templateObjectPoints;
+    // Generate the object points coordinates
+    openMVG::calibration::calcChessboardCorners(templateObjectPoints, boardSize, _inputSquareSize->getValue(), patternType);
+    // Assign the corners to all items
+    for(std::size_t frame: calibInputFrames)
+    {
+      // For some chessboard (ie. CCTag), we have an identification per point,
+      // and only a sub-part of the corners may be detected.
+      // So we only keep the visible corners from the templateObjectPoints
+      std::vector<int>& pointsId = _checkerPerFrame[frame]._pointsId;
+      std::vector<cv::Point3f> objectPoints;
+      for(size_t i = 0; i < pointsId.size(); ++i)
+        objectPoints[i] = templateObjectPoints[pointsId[i]];
+      calibObjectPoints.push_back(objectPoints);
+    }
+    assert(calibInputFrames.size() == calibImagePoints.size());
+  }
 
   int cvCalibFlags = 0;
   double totalAvgErr = 0;
@@ -212,7 +291,7 @@ void LensCalibrationPlugin::calibrateLens()
   float aspectRatio = 1.f;
   std::vector<cv::Mat> tvecs;
   std::vector<float> reprojErrs;
-  std::vector<std::size_t> rejectInputFrames;
+  std::vector<std::size_t> rejectInputFrames; //Only for debug panel.
 
   cvCalibFlags |= CV_CALIB_ZERO_TANGENT_DIST;
   const std::array<int, 6> fixDistortionCoefs = {CV_CALIB_FIX_K1, CV_CALIB_FIX_K2, CV_CALIB_FIX_K3, CV_CALIB_FIX_K4, CV_CALIB_FIX_K5, CV_CALIB_FIX_K6};
@@ -221,10 +300,8 @@ void LensCalibrationPlugin::calibrateLens()
 
   cv::Mat distCoeffs;
   cv::Mat cameraMatrix;
-  // Store the result of the calibration's refinement loop
-  bool isCalibrated = openMVG::calibration::calibrationIterativeOptimization(calibImagePoints,
-                                                                             calibObjectPoints,
-                                                                             imageSize,
+  // Store the result of the calibration's refinement loop.
+  bool isCalibrated = openMVG::calibration::calibrationIterativeOptimization(imageSize,
                                                                              aspectRatio,
                                                                              cvCalibFlags,
                                                                              cameraMatrix,
@@ -236,6 +313,8 @@ void LensCalibrationPlugin::calibrateLens()
                                                                              _inputMaxTotalAvgErr->getValue(),
                                                                              _inputMinInputFrames->getValue(),
                                                                              calibInputFrames,
+                                                                             calibImagePoints,
+                                                                             calibObjectPoints,
                                                                              calibImageScore,
                                                                              rejectInputFrames);
 
@@ -250,6 +329,8 @@ void LensCalibrationPlugin::calibrateLens()
                   _outputLensDistortionTangentialCoef2,
                   isCalibrated, totalAvgErr,
                   cameraMatrix, distCoeffs);
+  
+  sendMessage(OFX::Message::eMessageMessage, "calibrationFinished", "Calibration successful");
 }
 
 bool LensCalibrationPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
@@ -258,15 +339,10 @@ bool LensCalibrationPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX
 }
 
 void LensCalibrationPlugin::changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName)
-{
-  if(args.reason != OFX::InstanceChangeReason::eChangeTime)
-  {
-    clearAllData();
-  }
-}
+{}
 
 void LensCalibrationPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
-{
+{  
   //Calibrate
   if(paramName == kParamCalibrate)
   {
@@ -297,18 +373,18 @@ void LensCalibrationPlugin::changedParam(const OFX::InstanceChangedArgs &args, c
 void LensCalibrationPlugin::clearAllData()
 {
   _checkerPerFrame.clear();
+  _outputNbCheckersDetected->setValue(0);
+  _inputImageSize->setValue(0,0);
   clearCalibration();
 }
 
 void LensCalibrationPlugin::clearCalibration()
 {
   clearOutputParamValues();
-  //invalid render
 }
 
 void LensCalibrationPlugin::clearOutputParamValues()
 {
-  _outputNbCheckersDetected->setValue(0);
   _outputIsCalibrated->setValue(0);
   _outputAvgReprojErr->setValue(0);
   _outputCameraFocalLenght->setValue(0);

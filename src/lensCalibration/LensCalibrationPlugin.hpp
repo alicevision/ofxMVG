@@ -3,6 +3,10 @@
 #include "LensCalibrationPluginFactory.hpp"
 #include "LensCalibrationPluginDefinition.hpp"
 
+#ifdef HAVE_CCTAG
+#include <cctag/ICCTag.hpp>
+#endif
+
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -15,13 +19,13 @@ namespace LensCalibration {
  */
 class LensCalibrationPlugin : public OFX::ImageEffect 
 {
-private:
+public:
   //(!) Don't delete these, OFX::ImageEffect is managing them
-  
+
   //Clips
   OFX::Clip *_srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName); //Source clip
   OFX::Clip *_dstClip = fetchClip(kOfxImageEffectOutputClipName); //Destination clip
-  
+
   //Calibration parameters
   OFX::IntParam *_outputNbCheckersDetected = fetchIntParam(kParamNbCheckersDetected);
   OFX::BooleanParam *_outputIsCalibrated = fetchBooleanParam(kParamIsCalibrated);
@@ -51,9 +55,18 @@ private:
   OFX::BooleanParam *_debugEnable = fetchBooleanParam(kParamDebugEnable);
   OFX::StringParam *_debugRejectedImgFolder = fetchStringParam(kParamDebugRejectedImgFolder);
   OFX::StringParam *_debugSelectedImgFolder = fetchStringParam(kParamDebugSelectedImgFolder);
-  
+
+public:
+  struct CheckerPoints
+  {
+    std::vector<cv::Point2f> _detectedPoints;
+    std::vector<int> _pointsId;
+  };
   // Cache
-  std::map<OfxTime, std::vector<cv::Point2f> > _checkerPerFrame;
+  std::map<OfxTime, CheckerPoints > _checkerPerFrame;
+#ifdef HAVE_CCTAG
+  std::map<OfxTime, boost::ptr_list<cctag::ICCTag> > _cctagsPerFrame;
+#endif
 
 public:
   
