@@ -3,9 +3,7 @@ ofxMVG
 
 [OpenFX](http://openeffects.org) plugins for Multiple View Geometry
 
-Follow developments: 
-[![Stories in Ready](https://badge.waffle.io/poparteu/ofxMVG.png?label=ready&title=Ready)](http://waffle.io/poparteu/ofxMVG)
-[![Stories in Progress](https://badge.waffle.io/poparteu/ofxMVG.png?label=in progress&title=In Progress)](http://waffle.io/poparteu/ofxMVG)
+**This project is not ready for end users and is not maintained for now. It has been developed for testing and analyzing camera tracking algorithms. It may become active again in the future, but not for now.**
 
 ## CameraLocalizer
 
@@ -14,14 +12,14 @@ The plugin supports multiple clips in input to localize a RIG of cameras (multip
 
 ![Camera localization screenshot](./doc/cameraLocalizationNuke.png)
 
-[CameraLocalizer on ShuttleOFX.](http://shuttleofx.org/plugin/openmvg.cameralocalizer)
+CameraLocalizer on [ShuttleOFX](https://github.com/shuttleofx/ShuttleOFX)
 
 ## LensCalibration
 
 LensCalibration estimates the best distortion parameters according to the couple camera/optics of a dataset.
 The plugin supports video file & folder containing images or image sequence.
 
-[LensCalibration on ShuttleOFX.](http://shuttleofx.org/plugin/openmvg.lenscalibration)
+LensCalibration on [ShuttleOFX](https://github.com/shuttleofx/ShuttleOFX)
 
 ## Compilation
 
