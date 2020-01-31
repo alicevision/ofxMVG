@@ -1,5 +1,7 @@
 #pragma once
+
 #include "ofxsImageEffect.h"
+
 #include <climits>
 
 namespace openMVG_ofx {

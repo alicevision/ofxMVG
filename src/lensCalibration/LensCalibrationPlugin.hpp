@@ -3,6 +3,10 @@
 #include "LensCalibrationPluginFactory.hpp"
 #include "LensCalibrationPluginDefinition.hpp"
 
+#ifdef HAVE_CCTAG
+#include <cctag/ICCTag.hpp>
+#endif
+
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -15,29 +19,28 @@ namespace LensCalibration {
  */
 class LensCalibrationPlugin : public OFX::ImageEffect 
 {
-private:
+public:
   //(!) Don't delete these, OFX::ImageEffect is managing them
-  
+
   //Clips
   OFX::Clip *_srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName); //Source clip
   OFX::Clip *_dstClip = fetchClip(kOfxImageEffectOutputClipName); //Destination clip
-  
+
   //Calibration parameters
-  OFX::Int2DParam *_inputImageSize = fetchInt2DParam(kParamImageSize);
+  OFX::IntParam *_outputNbCheckersDetected = fetchIntParam(kParamNbCheckersDetected);
+  OFX::BooleanParam *_outputIsCalibrated = fetchBooleanParam(kParamIsCalibrated);
   OFX::BooleanParam *_inputImageIsGray = fetchBooleanParam(kParamInputImageIsGray);
+  OFX::Int2DParam *_inputImageSize = fetchInt2DParam(kParamImageSize);
   OFX::ChoiceParam *_inputPatternType = fetchChoiceParam(kParamPatternType);
   OFX::Int2DParam *_inputPatternSize = fetchInt2DParam(kParamPatternSize);
   OFX::DoubleParam *_inputSquareSize = fetchDoubleParam(kParamSquareSize);
   OFX::IntParam *_inputNbRadialCoef = fetchIntParam(kParamNbRadialCoef);
-  OFX::IntParam *_inputMaxFrames = fetchIntParam(kParamMaxFrames);
   OFX::IntParam *_inputMaxCalibFrames = fetchIntParam(kParamMaxCalibFrames);
   OFX::IntParam *_inputCalibGridSize = fetchIntParam(kParamCalibGridSize);
   OFX::IntParam *_inputMinInputFrames = fetchIntParam(kParamMinInputFrames);
   OFX::DoubleParam *_inputMaxTotalAvgErr = fetchDoubleParam(kParamMaxTotalAvgErr);
-  OFX::PushButtonParam *_outputCalibrate = fetchPushButtonParam(kParamCalibrate);
 
   //Output parameters
-  OFX::BooleanParam *_outputIsCalibrated = fetchBooleanParam(kParamOutputIsCalibrated);
   OFX::DoubleParam *_outputAvgReprojErr = fetchDoubleParam(kParamOutputAvgReprojErr);
   OFX::DoubleParam *_outputCameraFocalLenght = fetchDoubleParam(kParamOutputFocalLenght);
   OFX::Double2DParam *_outputCameraPrincipalPointOffset = fetchDouble2DParam(kParamOutputPrincipalPointOffset);
@@ -47,18 +50,23 @@ private:
   OFX::DoubleParam *_outputLensDistortionRadialCoef3 = fetchDoubleParam(kParamOutputRadialCoef3);
   OFX::DoubleParam *_outputLensDistortionTangentialCoef1 = fetchDoubleParam(kParamOutputTangentialCoef1);
   OFX::DoubleParam *_outputLensDistortionTangentialCoef2 = fetchDoubleParam(kParamOutputTangentialCoef2);
-  OFX::PushButtonParam *_outputClear = fetchPushButtonParam(kParamOutputClear);
 
   //Debug parameters
   OFX::BooleanParam *_debugEnable = fetchBooleanParam(kParamDebugEnable);
   OFX::StringParam *_debugRejectedImgFolder = fetchStringParam(kParamDebugRejectedImgFolder);
   OFX::StringParam *_debugSelectedImgFolder = fetchStringParam(kParamDebugSelectedImgFolder);
 
-  //Output Parameters List
-  std::vector<OFX::ValueParam*> _outputParams;
-  
+public:
+  struct CheckerPoints
+  {
+    std::vector<cv::Point2f> _detectedPoints;
+    std::vector<int> _pointsId;
+  };
   // Cache
-  std::map<OfxTime, std::vector<cv::Point2f> > checkerPerFrame;
+  std::map<OfxTime, CheckerPoints > _checkerPerFrame;
+#ifdef HAVE_CCTAG
+  std::map<OfxTime, boost::ptr_list<cctag::ICCTag> > _cctagsPerFrame;
+#endif
 
 public:
   
@@ -113,13 +121,26 @@ public:
   virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
   
 private:
+  /**
+   * @brief Calibrate lens distortion
+   */
   void calibrateLens();
   
-  void clearOutputParamValues()
-  {
-    for(OFX::ValueParam* outputParam: _outputParams)
-      outputParam->deleteAllKeys();
-  }
+  /**
+   * @brief Clear the calibration parameters and the group of images used for the calibration
+   */
+  void clearAllData();
+  
+  /**
+   * @brief Clear only the calibration parameters
+   */
+  void clearCalibration();
+  
+  /**
+   * @brief Clear all the output calibration parameters
+   */
+  void clearOutputParamValues();
+
 };
 
 

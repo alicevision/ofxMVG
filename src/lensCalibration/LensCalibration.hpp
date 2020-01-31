@@ -47,8 +47,9 @@ void convertGGG32ToGRAY8(const Common::Image<float>& inputImage, cv::Mat& output
 openMVG::calibration::Pattern getPatternType(EParamPatternType pattern);
 
 /**
- * @brief Set intrinsic values and distortion coefficients into OFX parameters
- * @param[in] _outputFlags
+ * @brief Set intrinsic values and distortion coefficients into OFX parameters 
+ * @param[in] _outputIsCalibrated
+ * @param[in] _outputAvgReprojErr
  * @param[in] _outputCameraFocalLenght
  * @param[in] _outputCameraPrincipalPointOffset
  * @param[in] _outputLensDistortionRadialCoef1
@@ -56,17 +57,22 @@ openMVG::calibration::Pattern getPatternType(EParamPatternType pattern);
  * @param[in] _outputLensDistortionRadialCoef3
  * @param[in] _outputLensDistortionTangentialCoef1
  * @param[in] _outputLensDistortionTangentialCoef2
- * @param[in] cvCalibFlags
+ * @param[in] isCalibrated
+ * @param[in] totalAvgErr
  * @param[in] cameraMatrix
  * @param[in] distCoeffs
  */
-void setOutputParams(OFX::DoubleParam *_outputCameraFocalLenght,
+void setOutputParams(OFX::BooleanParam *_outputIsCalibrated,
+                     OFX::DoubleParam *_outputAvgReprojErr,
+                     OFX::DoubleParam *_outputCameraFocalLenght,
                      OFX::Double2DParam *_outputCameraPrincipalPointOffset,
                      OFX::DoubleParam *_outputLensDistortionRadialCoef1,
                      OFX::DoubleParam *_outputLensDistortionRadialCoef2,
                      OFX::DoubleParam *_outputLensDistortionRadialCoef3,
                      OFX::DoubleParam *_outputLensDistortionTangentialCoef1,
                      OFX::DoubleParam *_outputLensDistortionTangentialCoef2,
+                     bool isCalibrated,
+                     double totalAvgErr,
                      cv::Mat cameraMatrix,
                      cv::Mat distCoeffs);
   

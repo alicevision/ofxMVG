@@ -78,22 +78,28 @@ openMVG::calibration::Pattern getPatternType(EParamPatternType pattern)
     case eParamPatternTypeCirclesGrid : return openMVG::calibration::CIRCLES_GRID; break;
     case eParamPatternTypeAsymmetricCirclesGrid : return openMVG::calibration::ASYMMETRIC_CIRCLES_GRID; break;
 #ifdef HAVE_CCTAG
-    case eParamPatternTypeCCTagGrid : return openMVG::calibration::CCTAG_GRID; break;
+    case eParamPatternTypeCCTagGrid : return openMVG::calibration::ASYMMETRIC_CCTAG_GRID; break;
 #endif
     default : throw std::invalid_argument("Unrecognized Pattern Type : " + std::to_string(pattern));
   }
 }
 
-void setOutputParams(OFX::DoubleParam *_outputCameraFocalLenght,
+void setOutputParams(OFX::BooleanParam *_outputIsCalibrated,
+                     OFX::DoubleParam *_outputAvgReprojErr,
+                     OFX::DoubleParam *_outputCameraFocalLenght,
                      OFX::Double2DParam *_outputCameraPrincipalPointOffset,
                      OFX::DoubleParam *_outputLensDistortionRadialCoef1,
                      OFX::DoubleParam *_outputLensDistortionRadialCoef2,
                      OFX::DoubleParam *_outputLensDistortionRadialCoef3,
                      OFX::DoubleParam *_outputLensDistortionTangentialCoef1,
                      OFX::DoubleParam *_outputLensDistortionTangentialCoef2,
+                     bool isCalibrated,
+                     double totalAvgErr,
                      cv::Mat cameraMatrix,
                      cv::Mat distCoeffs)
 {
+  _outputIsCalibrated->setValue(isCalibrated);
+  _outputAvgReprojErr->setValue(totalAvgErr);
   _outputCameraFocalLenght->setValue(cameraMatrix.at<double>(0,0));
   _outputCameraPrincipalPointOffset->setValue(cameraMatrix.at<double>(0,2), cameraMatrix.at<double>(1,2));
   _outputLensDistortionRadialCoef1->setValue(distCoeffs.at<double>(0));

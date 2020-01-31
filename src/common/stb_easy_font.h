@@ -84,7 +84,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-struct {
+static struct {
     unsigned char advance;
     unsigned char h_seg;
     unsigned char v_seg;
@@ -115,7 +115,7 @@ struct {
     {  3,203,252 },  {  5,203,253 },  { 22,210,253 },  {  0,214,253 },
 };
 
-unsigned char stb_easy_font_hseg[214] = {
+static unsigned char stb_easy_font_hseg[214] = {
    97,37,69,84,28,51,2,18,10,49,98,41,65,25,81,105,33,9,97,1,97,37,37,36,
     81,10,98,107,3,100,3,99,58,51,4,99,58,8,73,81,10,50,98,8,73,81,4,10,50,
     98,8,25,33,65,81,10,50,17,65,97,25,33,25,49,9,65,20,68,1,65,25,49,41,
@@ -127,7 +127,7 @@ unsigned char stb_easy_font_hseg[214] = {
     84,73,57,41,49,25,33,65,81,9,97,1,97,25,33,65,81,57,33,25,41,25,
 };
 
-unsigned char stb_easy_font_vseg[253] = {
+static unsigned char stb_easy_font_vseg[253] = {
    4,2,8,10,15,8,15,33,8,15,8,73,82,73,57,41,82,10,82,18,66,10,21,29,1,65,
     27,8,27,9,65,8,10,50,97,74,66,42,10,21,57,41,29,25,14,81,73,57,26,8,8,
     26,66,3,8,8,15,19,21,90,58,26,18,66,18,105,89,28,74,17,8,73,57,26,21,
@@ -165,7 +165,7 @@ inline int stb_easy_font_draw_segs(float x, float y, unsigned char *segs, int nu
     return offset;
 }
 
-float stb_easy_font_spacing_val = 0;
+static float stb_easy_font_spacing_val = 0;
 inline void stb_easy_font_spacing(float spacing)
 {
    stb_easy_font_spacing_val = spacing;
